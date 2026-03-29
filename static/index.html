@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EchoTalk</title>
+  <style>
+    /* Design Tokens */
+    :root {
+      --color-bg-app: #111111;
+      --color-bg-card: #1e1e1e;
+      --color-border-subtle: rgba(255,255,255,0.08);
+      --color-text-primary: #f0f0f0;
+      --color-text-secondary: rgba(255,255,255,0.55);
+      --color-text-muted: rgba(255,255,255,0.35);
+
+      --color-angie-primary: #e040fb;
+      --color-angie-glow: rgba(224,64,251,0.35);
+      --gradient-angie: linear-gradient(135deg, #e040fb 0%, #7c4dff 100%);
+      --gradient-angie-card: linear-gradient(160deg, rgba(224,64,251,0.12) 0%, rgba(124,77,255,0.06) 100%);
+
+      --color-andy-primary: #ff6d00;
+      --color-andy-glow: rgba(255,109,0,0.35);
+      --gradient-andy: linear-gradient(135deg, #ff6d00 0%, #ffd600 100%);
+      --gradient-andy-card: linear-gradient(160deg, rgba(255,109,0,0.12) 0%, rgba(255,214,0,0.06) 100%);
+
+      --radius-card: 20px;
+      --radius-badge: 100px;
+      --radius-btn: 16px;
+      --duration-normal: 250ms;
+      --duration-fast: 150ms;
+      --ease-out: cubic-bezier(0.2,0,0,1);
+      --ease-spring: cubic-bezier(0.34,1.56,0.64,1);
+    }
+
+    /* Reset & Base */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      background: var(--color-bg-app);
+      color: var(--color-text-primary);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Status bar & back button */
+    .status-bar { display: flex; align-items: center; padding: 8px 12px; }
+    #back-btn {
+      display: none; background: none; border: 1px solid rgba(255,255,255,0.15);
+      color: #aaa; font-size: 14px; padding: 4px 10px; border-radius: 8px;
+      cursor: pointer; white-space: nowrap; flex-shrink: 0;
+      transition: all var(--duration-fast) var(--ease-out);
+    }
+    #back-btn:hover { border-color: rgba(255,255,255,0.3); color: #fff; }
+    #back-btn.visible { display: block; }
+    #status { flex: 1; text-align: center; font-size: 14px; color: #888; padding: 4px 0; }
+    #conversation { flex: 1; display: none; overflow: hidden; }
+    #conversation.active { display: flex; }
+    #transcript { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+    .msg { padding: 8px 12px; border-radius: 8px; max-width: 80%; font-size: 15px; line-height: 1.4; }
+    .msg.user { background: #1a5276; align-self: flex-end; }
+    .msg.ai { background: #1e3a2f; align-self: flex-start; }
+    .msg.error { background: #5c1a1a; align-self: center; font-size: 13px; }
+    .msg__translation {
+      margin-top: 6px;
+      padding-top: 6px;
+      border-top: 1px solid rgba(255,255,255,0.1);
+      font-size: 13px;
+      line-height: 1.5;
+      color: rgba(255,255,255,0.5);
+    }
+
+    /* Word list panel */
+    #wordpanel {
+      width: 240px;
+      border-left: 1px solid var(--color-border-subtle);
+      background: var(--color-bg-card);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    .wordpanel__header {
+      padding: 12px 14px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--color-text-muted);
+      border-bottom: 1px solid var(--color-border-subtle);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .wordpanel__count {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--color-text-muted);
+      background: rgba(255,255,255,0.06);
+      padding: 2px 7px;
+      border-radius: 10px;
+    }
+    .wordpanel__list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px 6px;
+      display: flex;
+      flex-wrap: wrap;
+      align-content: flex-start;
+      gap: 4px;
+    }
+    .word-chip {
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 13px;
+      line-height: 1.3;
+      cursor: pointer;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: transparent;
+      color: var(--color-text-secondary);
+      transition: all var(--duration-fast) var(--ease-out);
+      user-select: none;
+    }
+    .word-chip:hover {
+      border-color: rgba(255,255,255,0.2);
+      color: var(--color-text-primary);
+    }
+    .word-chip.bookmarked {
+      background: rgba(255, 214, 0, 0.15);
+      border-color: rgba(255, 214, 0, 0.4);
+      color: #ffd600;
+    }
+
+    /* Mobile: toggle button + overlay panel */
+    #wordpanel-toggle {
+      display: none;
+      position: fixed;
+      bottom: 16px;
+      right: 16px;
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: var(--color-bg-card);
+      border: 1px solid var(--color-border-subtle);
+      color: var(--color-text-primary);
+      font-size: 20px;
+      cursor: pointer;
+      z-index: 10;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+      align-items: center;
+      justify-content: center;
+    }
+    @media (max-width: 640px) {
+      #wordpanel {
+        position: fixed;
+        top: 0; right: 0; bottom: 0;
+        width: 260px;
+        z-index: 20;
+        transform: translateX(100%);
+        transition: transform var(--duration-normal) var(--ease-out);
+        box-shadow: -4px 0 20px rgba(0,0,0,0.5);
+      }
+      #wordpanel.open { transform: translateX(0); }
+      #wordpanel-toggle { display: flex; }
+    }
+
+    /* Controls — character select */
+    #controls {
+      flex: 1;
+      padding: 24px 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 24px;
+      overflow-y: auto;
+    }
+    #controls.hidden { display: none; }
+    .controls__header { margin-top: auto; }
+    .controls__cards { margin-bottom: auto; }
+    .controls__header { text-align: center; display: flex; flex-direction: column; gap: 8px; }
+    .controls__eyebrow { font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-text-muted); }
+    .controls__title { font-size: clamp(22px,5vw,28px); font-weight: 700; letter-spacing: -0.02em; line-height: 1.2; }
+    .controls__subtitle { font-size: 14px; color: var(--color-text-secondary); line-height: 1.6; }
+
+    .controls__cards {
+      width: 100%;
+      max-width: 520px;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 16px;
+    }
+    @media (min-width: 440px) {
+      .controls__cards { grid-template-columns: 1fr 1fr; gap: 12px; }
+    }
+
+    /* Character Card */
+    .char-card {
+      position: relative;
+      border-radius: var(--radius-card);
+      background: var(--color-bg-card);
+      border: 1px solid var(--color-border-subtle);
+      padding: 32px 24px 24px;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      text-align: center;
+      overflow: hidden;
+      outline: none;
+      transition:
+        transform var(--duration-normal) var(--ease-spring),
+        box-shadow var(--duration-normal) var(--ease-out),
+        border-color var(--duration-normal) var(--ease-out);
+    }
+    .char-card[aria-disabled="true"] { opacity: 0.5; cursor: not-allowed; pointer-events: none; }
+
+    /* Card gradient tint */
+    .char-card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      pointer-events: none;
+    }
+    /* Top glow */
+    .char-card::after {
+      content: "";
+      position: absolute;
+      top: -40px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 120px;
+      height: 80px;
+      border-radius: 50%;
+      filter: blur(28px);
+      opacity: 0.5;
+      transition: opacity var(--duration-normal) var(--ease-out);
+      pointer-events: none;
+    }
+
+    /* Angie variant */
+    .char-card--angie::before { background: var(--gradient-angie-card); }
+    .char-card--angie::after { background: var(--color-angie-primary); }
+
+    /* Andy variant */
+    .char-card--andy::before { background: var(--gradient-andy-card); }
+    .char-card--andy::after { background: var(--color-andy-primary); }
+
+    /* Hover/Focus */
+    .char-card:hover, .char-card:focus-visible { transform: translateY(-6px) scale(1.02); }
+    .char-card--angie:hover, .char-card--angie:focus-visible {
+      border-color: rgba(224,64,251,0.5);
+      box-shadow: 0 0 0 1px rgba(224,64,251,0.3), 0 20px 60px -10px rgba(224,64,251,0.4), 0 8px 20px -4px rgba(0,0,0,0.6);
+    }
+    .char-card--andy:hover, .char-card--andy:focus-visible {
+      border-color: rgba(255,109,0,0.5);
+      box-shadow: 0 0 0 1px rgba(255,109,0,0.3), 0 20px 60px -10px rgba(255,109,0,0.35), 0 8px 20px -4px rgba(0,0,0,0.6);
+    }
+    .char-card:hover::after, .char-card:focus-visible::after { opacity: 0.9; }
+    .char-card:active { transform: translateY(-2px) scale(0.98); transition-duration: var(--duration-fast); }
+
+    /* Avatar */
+    .char-card__avatar {
+      position: relative; z-index: 1;
+      font-size: clamp(52px,12vw,64px); line-height: 1;
+      filter: drop-shadow(0 4px 12px rgba(0,0,0,0.4));
+      transition: transform var(--duration-normal) var(--ease-spring);
+      user-select: none; pointer-events: none;
+    }
+    .char-card:hover .char-card__avatar { transform: scale(1.1) rotate(-4deg); }
+    .char-card--andy:hover .char-card__avatar { transform: scale(1.1) rotate(4deg); }
+
+    /* Name — gradient text */
+    .char-card__name {
+      position: relative; z-index: 1;
+      font-size: 22px; font-weight: 800; letter-spacing: -0.02em; line-height: 1;
+      background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      pointer-events: none;
+    }
+    .char-card--angie .char-card__name { background-image: var(--gradient-angie); }
+    .char-card--andy .char-card__name { background-image: var(--gradient-andy); }
+
+    /* Description */
+    .char-card__desc {
+      position: relative; z-index: 1;
+      font-size: 13px; line-height: 1.6; color: var(--color-text-secondary);
+      pointer-events: none;
+    }
+
+    /* Voice badge */
+    .char-card__badge {
+      position: relative; z-index: 1;
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 4px 10px 4px 8px;
+      border-radius: var(--radius-badge);
+      font-size: 11px; font-weight: 600; letter-spacing: 0.04em;
+      pointer-events: none;
+    }
+    .char-card__badge-dot {
+      width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
+      animation: badge-pulse 2s ease-in-out infinite;
+    }
+    .char-card--angie .char-card__badge { background: rgba(224,64,251,0.15); color: #e77ff5; border: 1px solid rgba(224,64,251,0.25); }
+    .char-card--angie .char-card__badge-dot { background: var(--color-angie-primary); }
+    .char-card--andy .char-card__badge { background: rgba(255,109,0,0.15); color: #ff9a50; border: 1px solid rgba(255,109,0,0.25); }
+    .char-card--andy .char-card__badge-dot { background: var(--color-andy-primary); }
+
+    /* CTA button */
+    .char-card__cta {
+      position: relative; z-index: 1;
+      width: 100%;
+      padding: 11px 16px;
+      border-radius: var(--radius-btn);
+      font-size: 14px; font-weight: 700; letter-spacing: 0.01em;
+      color: #fff; border: none; cursor: pointer;
+      white-space: nowrap;
+      pointer-events: none;
+    }
+    .char-card--angie .char-card__cta { background: var(--gradient-angie); box-shadow: 0 4px 20px -4px var(--color-angie-glow); }
+    .char-card--andy .char-card__cta { background: var(--gradient-andy); box-shadow: 0 4px 20px -4px var(--color-andy-glow); color: #1a0a00; }
+    .char-card:hover .char-card__cta { opacity: 0.92; }
+
+    @keyframes badge-pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.6; transform: scale(0.8); }
+    }
+
+    /* Language selector */
+    .lang-selector {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 20px;
+    }
+    .lang-btn {
+      display: flex; align-items: center; gap: 6px;
+      padding: 8px 16px;
+      border-radius: var(--radius-badge);
+      border: 1px solid var(--color-border-subtle);
+      background: var(--color-bg-card);
+      color: var(--color-text-secondary);
+      font-size: 13px; font-weight: 500;
+      cursor: pointer;
+      transition: all var(--duration-fast) var(--ease-out);
+    }
+    .lang-btn:hover { border-color: rgba(255,255,255,0.2); color: var(--color-text-primary); }
+    .lang-btn--active {
+      border-color: rgba(255,255,255,0.4);
+      background: rgba(255,255,255,0.1);
+      color: var(--color-text-primary);
+      font-weight: 700;
+    }
+    .lang-btn__flag { font-size: 16px; }
+
+    @media (prefers-reduced-motion: reduce) {
+      .char-card, .char-card::after, .char-card .char-card__avatar, .char-card__badge-dot {
+        transition: none; animation: none;
+      }
+      .char-card:hover, .char-card:focus-visible { transform: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="status-bar">
+    <button id="back-btn" onclick="goBack()">&#8592; &#25147;&#12427;</button>
+    <div id="status">&#35441;&#12375;&#30456;&#25163;&#12434;&#36984;&#12435;&#12391;&#12367;&#12384;&#12373;&#12356;</div>
+  </div>
+  <div id="conversation">
+    <div id="transcript"></div>
+    <div id="wordpanel">
+      <div class="wordpanel__header">
+        <span>Words</span>
+        <span class="wordpanel__count" id="word-count">0</span>
+      </div>
+      <div class="wordpanel__list" id="word-list"></div>
+    </div>
+  </div>
+  <button id="wordpanel-toggle" aria-label="&#21336;&#35486;&#12522;&#12473;&#12488;">Aa</button>
+  <div id="controls">
+    <header class="controls__header">
+      <p class="controls__eyebrow">Select your partner</p>
+      <h1 class="controls__title">&#35441;&#12377;&#30456;&#25163;&#12434;&#36984;&#12412;&#12358;</h1>
+      <p class="controls__subtitle">&#12393;&#12385;&#12425;&#12363;&#12434;&#36984;&#12435;&#12391;&#12289;&#20250;&#35441;&#12434;&#12473;&#12479;&#12540;&#12488;&#65281;</p>
+    </header>
+
+    <div class="lang-selector" id="lang-selector">
+      <button class="lang-btn lang-btn--active" data-lang="en" onclick="selectLang('en')">
+        <span class="lang-btn__flag">&#127482;&#127480;</span> English
+      </button>
+      <button class="lang-btn" data-lang="id" onclick="selectLang('id')">
+        <span class="lang-btn__flag">&#127470;&#127465;</span> Indonesian
+      </button>
+      <button class="lang-btn" data-lang="ja" onclick="selectLang('ja')">
+        <span class="lang-btn__flag">&#127471;&#127477;</span> &#26085;&#26412;&#35486;
+      </button>
+    </div>
+
+    <div class="controls__cards">
+      <article class="char-card char-card--angie" tabindex="0"
+        onclick="start('Kore')"
+        onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();start('Kore')}">
+        <div class="char-card__avatar" aria-hidden="true">&#128105;</div>
+        <strong class="char-card__name">Angie</strong>
+        <p class="char-card__desc">LA&#22312;&#20303;&#12398;&#12509;&#12483;&#12503;&#12471;&#12531;&#12460;&#12540;&#12290;<br>&#12486;&#12531;&#12471;&#12519;&#12531;&#39640;&#12417;&#12391;&#27005;&#12375;&#12356;&#65281;</p>
+        <span class="char-card__badge"><span class="char-card__badge-dot" aria-hidden="true"></span>Voice &middot; Kore</span>
+        <div class="char-card__cta" aria-hidden="true">Angie&#12392;&#35441;&#12377; &#8594;</div>
+      </article>
+
+      <article class="char-card char-card--andy" tabindex="0"
+        onclick="start('Puck')"
+        onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();start('Puck')}">
+        <div class="char-card__avatar" aria-hidden="true">&#128104;</div>
+        <strong class="char-card__name">Andy</strong>
+        <p class="char-card__desc">NY&#12398;&#12473;&#12488;&#12522;&#12540;&#12488;&#12501;&#12540;&#12489;&#31995;YouTuber&#12290;<br>&#12494;&#12522;&#12364;&#33391;&#12367;&#12390;&#38754;&#30333;&#12356;&#65281;</p>
+        <span class="char-card__badge"><span class="char-card__badge-dot" aria-hidden="true"></span>Voice &middot; Puck</span>
+        <div class="char-card__cta" aria-hidden="true">Andy&#12392;&#35441;&#12377; &#8594;</div>
+      </article>
+    </div>
+  </div>
+
+  <script>
+    let ws = null;
+    let audioCtx = null;
+    let mediaStream = null;
+    let scriptNode = null;
+    let isRecording = false;
+
+    let currentAiMsg = null;
+    let currentAiText = "";
+    let awaitingTranslation = null;
+    let lateTranslateTimer = null;
+
+    // Language state
+    let selectedLang = "en";
+    let currentLang = "en";
+
+    // Character prompts (moved from server — not secret)
+    const CHARACTER_PROMPTS = {
+      Kore: {
+        en: "You are Angie, a pop singer living in LA. You're super upbeat, energetic, and fun to talk to. You love music, fashion, and social media. You use trendy slang and expressions naturally. Always respond in English. The user is a native Japanese speaker. Their audio input is in Japanese. Understand their Japanese speech and always respond in English. Keep responses concise (1-3 sentences). If you notice grammar mistakes, casually mention the correct way to say it like a friend would.",
+        id: "You are Angie, a pop singer living in LA. You're super upbeat, energetic, and fun to talk to. You love music, fashion, and social media. Always respond in Indonesian (Bahasa Indonesia). Use natural, casual Indonesian with common slang. The user is a native Japanese speaker. Their audio input is in Japanese \u2014 not Korean. Understand their Japanese speech and always respond in Indonesian. Keep responses concise (1-3 sentences). If you notice grammar mistakes, casually mention the correct way to say it like a friend would.",
+        ja: "You are Angie, a pop singer living in LA. You're super upbeat, energetic, and fun to talk to. You love music, fashion, and social media. Always respond in Japanese. The user is a native Japanese speaker. Their audio input is in Japanese. Use natural, casual Japanese with trendy expressions. Keep responses concise (1-3 sentences). Be friendly and encouraging.",
+      },
+      Puck: {
+        en: "You are Andy, a street food YouTuber based in NYC. You're chill, funny, and love talking about food, travel, and city life. You have great stories and use casual, natural English. Always respond in English. The user is a native Japanese speaker. Their audio input is in Japanese. Understand their Japanese speech and always respond in English. Keep responses concise (1-3 sentences). If you notice grammar mistakes, casually mention the correct way to say it like a buddy would.",
+        id: "You are Andy, a street food YouTuber based in NYC. You're chill, funny, and love talking about food, travel, and city life. You have great stories. Always respond in Indonesian (Bahasa Indonesia). Use natural, casual Indonesian. The user is a native Japanese speaker. Their audio input is in Japanese \u2014 not Korean. Understand their Japanese speech and always respond in Indonesian. Keep responses concise (1-3 sentences). If you notice grammar mistakes, casually mention the correct way to say it like a buddy would.",
+        ja: "You are Andy, a street food YouTuber based in NYC. You're chill, funny, and love talking about food, travel, and city life. You have great stories. Always respond in Japanese. The user is a native Japanese speaker. Their audio input is in Japanese. Use natural, casual Japanese. Keep responses concise (1-3 sentences). Be friendly and laid-back.",
+      },
+    };
+
+    function getSystemPrompt(voice, lang) {
+      return CHARACTER_PROMPTS[voice]?.[lang] || CHARACTER_PROMPTS.Kore.en;
+    }
+
+    function selectLang(lang) {
+      selectedLang = lang;
+      document.querySelectorAll(".lang-btn").forEach(btn => {
+        btn.classList.toggle("lang-btn--active", btn.dataset.lang === lang);
+      });
+    }
+
+    // Track which elements already have translation to prevent duplicates
+    const translated = new WeakSet();
+
+    // Word list
+    const wordSet = new Set();
+    const bookmarkedWords = new Set();
+
+    const STOP_WORDS = new Set([
+      "i","me","my","you","your","he","she","it","we","they","them","his","her","its","our","their",
+      "a","an","the","is","am","are","was","were","be","been","being",
+      "do","does","did","have","has","had","will","would","shall","should","can","could","may","might","must",
+      "to","of","in","for","on","at","by","with","from","as","into","about","up","out","so",
+      "and","but","or","if","not","no","yes","oh","hey","hi","hello","wow","yeah","ok","okay",
+      "that","this","what","how","who","when","where","why","which",
+      "just","very","really","too","also","well","like","know","think","get","got","go","going",
+    ]);
+
+    function extractWords(text) {
+      return text
+        .replace(/[^a-zA-Z'\- ]/g, " ")
+        .split(/\s+/)
+        .filter(w => w.length > 1 && !STOP_WORDS.has(w.toLowerCase()));
+    }
+
+    function addWordsFromAiText(text) {
+      const words = extractWords(text);
+      let added = false;
+      for (const word of words) {
+        const key = word.toLowerCase();
+        if (!wordSet.has(key)) {
+          wordSet.add(key);
+          added = true;
+          const chip = document.createElement("button");
+          chip.className = "word-chip";
+          if (bookmarkedWords.has(key)) chip.classList.add("bookmarked");
+          chip.textContent = word;
+          chip.dataset.word = key;
+          chip.onclick = () => {
+            chip.classList.toggle("bookmarked");
+            if (chip.classList.contains("bookmarked")) {
+              bookmarkedWords.add(key);
+            } else {
+              bookmarkedWords.delete(key);
+            }
+            updateBookmarkCount();
+          };
+          document.getElementById("word-list").appendChild(chip);
+        }
+      }
+      if (added) updateBookmarkCount();
+    }
+
+    function updateBookmarkCount() {
+      const total = wordSet.size;
+      const marked = bookmarkedWords.size;
+      document.getElementById("word-count").textContent = marked > 0 ? `${marked}/${total}` : String(total);
+    }
+
+    // Mobile toggle
+    document.getElementById("wordpanel-toggle").onclick = () => {
+      document.getElementById("wordpanel").classList.toggle("open");
+    };
+
+    // Playback
+    let playQueue = [];
+    let isPlaying = false;
+    let playCtx = null;
+
+    function goBack() {
+      if (!ws) return;
+      clearTimeout(lateTranslateTimer);
+      lateTranslateTimer = null;
+      playQueue = [];
+      isPlaying = false;
+      playCtx?.close();
+      playCtx = null;
+      stopRecording();
+      audioCtx?.close();
+      audioCtx = null;
+      ws.close();
+    }
+
+    function setStatus(text) {
+      document.getElementById("status").textContent = text;
+    }
+
+    function addMsg(text, cls) {
+      const div = document.createElement("div");
+      div.className = "msg " + cls;
+      div.textContent = text;
+      document.getElementById("transcript").appendChild(div);
+      div.scrollIntoView({ behavior: "smooth" });
+    }
+
+    async function fetchTranslation(text, msgEl) {
+      if (currentLang === "ja") return;
+      if (translated.has(msgEl)) return;
+      translated.add(msgEl);
+
+      try {
+        const res = await fetch("/api/translate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text, sourceLang: currentLang }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          console.warn("Translation error:", res.status, data.error);
+          translated.delete(msgEl);
+          return;
+        }
+        if (data.translation) {
+          const translationDiv = document.createElement("div");
+          translationDiv.className = "msg__translation";
+          translationDiv.textContent = data.translation;
+          msgEl.appendChild(translationDiv);
+          msgEl.scrollIntoView({ behavior: "smooth" });
+        }
+      } catch (e) {
+        console.error("Translation failed:", e);
+        translated.delete(msgEl);
+      }
+    }
+
+    function handleAiText(text) {
+      const targetMsg = currentAiMsg || awaitingTranslation;
+      if (!targetMsg) {
+        currentAiMsg = document.createElement("div");
+        currentAiMsg.className = "msg ai";
+        currentAiText = "";
+        const textSpan = document.createElement("span");
+        textSpan.className = "msg__original";
+        currentAiMsg.appendChild(textSpan);
+        document.getElementById("transcript").appendChild(currentAiMsg);
+      } else if (!currentAiMsg) {
+        currentAiMsg = awaitingTranslation;
+        currentAiText = "";
+      }
+      const isLate = awaitingTranslation !== null;
+      awaitingTranslation = null;
+      currentAiText += text;
+      currentAiMsg.querySelector(".msg__original").textContent = currentAiText;
+      currentAiMsg.scrollIntoView({ behavior: "smooth" });
+      addWordsFromAiText(text);
+      if (isLate) {
+        clearTimeout(lateTranslateTimer);
+        const el = currentAiMsg;
+        const txt = currentAiText;
+        lateTranslateTimer = setTimeout(() => {
+          fetchTranslation(txt, el);
+        }, 300);
+      }
+    }
+
+    function handleTurnComplete() {
+      if (currentAiMsg && currentAiText) {
+        fetchTranslation(currentAiText, currentAiMsg);
+        currentAiMsg = null;
+        currentAiText = "";
+      } else if (currentAiMsg) {
+        awaitingTranslation = currentAiMsg;
+        currentAiMsg = null;
+        currentAiText = "";
+      }
+    }
+
+    async function start(voice) {
+      if (ws !== null) return;
+      currentLang = selectedLang;
+      document.querySelectorAll(".char-card").forEach(c => c.setAttribute("aria-disabled", "true"));
+      setStatus("Connecting...");
+
+      try {
+        audioCtx = new AudioContext({ sampleRate: 16000 });
+        mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      } catch (e) {
+        setStatus("\u30de\u30a4\u30af\u306e\u8a31\u53ef\u304c\u5fc5\u8981\u3067\u3059\u3002");
+        document.querySelectorAll(".char-card").forEach(c => c.removeAttribute("aria-disabled"));
+        return;
+      }
+
+      // Fetch session config from server
+      let session;
+      try {
+        const res = await fetch("/api/session");
+        if (!res.ok) throw new Error("Session failed: " + res.status);
+        session = await res.json();
+      } catch (e) {
+        setStatus("\u63a5\u7d9a\u306b\u5931\u6557\u3057\u307e\u3057\u305f\u3002\u30ea\u30ed\u30fc\u30c9\u3057\u3066\u304f\u3060\u3055\u3044\u3002");
+        audioCtx?.close(); audioCtx = null;
+        mediaStream?.getTracks().forEach(t => t.stop());
+        document.querySelectorAll(".char-card").forEach(c => c.removeAttribute("aria-disabled"));
+        return;
+      }
+
+      // Switch to conversation view
+      document.getElementById("controls").classList.add("hidden");
+      document.getElementById("conversation").classList.add("active");
+      document.getElementById("back-btn").classList.add("visible");
+
+      // Connect directly to Gemini WebSocket
+      ws = new WebSocket(session.wsUrl);
+
+      ws.onopen = () => {
+        const systemPrompt = getSystemPrompt(voice, currentLang);
+        ws.send(JSON.stringify({
+          setup: {
+            model: session.model,
+            generationConfig: {
+              responseModalities: ["AUDIO"],
+              speechConfig: {
+                voiceConfig: {
+                  prebuiltVoiceConfig: { voiceName: voice },
+                },
+              },
+            },
+            systemInstruction: {
+              parts: [{ text: systemPrompt }],
+            },
+          },
+        }));
+        setStatus("Waiting for AI...");
+      };
+
+      ws.onmessage = (e) => {
+        let msg;
+        try {
+          msg = JSON.parse(e.data);
+        } catch {
+          return;
+        }
+
+        // Gemini setup complete
+        if ("setupComplete" in msg) {
+          setStatus("\u6e96\u5099\u304c\u3067\u304d\u305f\u3089\u8a71\u3057\u304b\u3051\u3066\u307f\u3066\u304f\u3060\u3055\u3044\u3002");
+          startRecording();
+          return;
+        }
+
+        // Gemini server content
+        if ("serverContent" in msg) {
+          const sc = msg.serverContent;
+
+          if (sc.modelTurn?.parts) {
+            for (const part of sc.modelTurn.parts) {
+              if (part.inlineData) {
+                queueAudio(part.inlineData.data);
+              }
+              if (part.text) {
+                handleAiText(part.text);
+              }
+            }
+          }
+
+          // inputTranscription: skip (unreliable for Japanese)
+
+          if (sc.outputTranscription?.text) {
+            handleAiText(sc.outputTranscription.text);
+          }
+
+          if (sc.turnComplete) {
+            handleTurnComplete();
+          }
+        }
+      };
+
+      ws.onclose = () => {
+        ws = null;
+        clearTimeout(lateTranslateTimer);
+        lateTranslateTimer = null;
+        setStatus("\u8a71\u3057\u76f8\u624b\u3092\u9078\u3093\u3067\u304f\u3060\u3055\u3044");
+        stopRecording();
+        document.getElementById("controls").classList.remove("hidden");
+        document.getElementById("conversation").classList.remove("active");
+        document.getElementById("back-btn").classList.remove("visible");
+        document.getElementById("transcript").innerHTML = "";
+        document.querySelectorAll(".char-card").forEach(c => c.removeAttribute("aria-disabled"));
+        currentAiMsg = null;
+        currentAiText = "";
+        awaitingTranslation = null;
+      };
+
+      ws.onerror = () => {
+        setStatus("Connection failed");
+      };
+    }
+
+    function startRecording() {
+      const source = audioCtx.createMediaStreamSource(mediaStream);
+      scriptNode = audioCtx.createScriptProcessor(4096, 1, 1);
+      scriptNode.onaudioprocess = (e) => {
+        if (!isRecording || ws?.readyState !== WebSocket.OPEN) return;
+        const float32 = e.inputBuffer.getChannelData(0);
+        const int16 = new Int16Array(float32.length);
+        for (let i = 0; i < float32.length; i++) {
+          int16[i] = Math.max(-32768, Math.min(32767, Math.round(float32[i] * 32767)));
+        }
+        const bytes = new Uint8Array(int16.buffer);
+        let binary = "";
+        for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+        const b64 = btoa(binary);
+        // Send audio directly to Gemini
+        ws.send(JSON.stringify({
+          realtimeInput: {
+            audio: {
+              data: b64,
+              mimeType: "audio/pcm;rate=16000",
+            },
+          },
+        }));
+      };
+
+      source.connect(scriptNode);
+      scriptNode.connect(audioCtx.destination);
+      isRecording = true;
+    }
+
+    function stopRecording() {
+      isRecording = false;
+      scriptNode?.disconnect();
+      mediaStream?.getTracks().forEach((t) => t.stop());
+    }
+
+    // Audio playback: PCM 24kHz from Gemini — single AudioContext reused
+    function queueAudio(base64) {
+      const binary = atob(base64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      const int16 = new Int16Array(bytes.buffer);
+      const float32 = new Float32Array(int16.length);
+      for (let i = 0; i < int16.length; i++) float32[i] = int16[i] / 32768;
+      playQueue.push(float32);
+      if (!isPlaying) playNext();
+    }
+
+    function playNext() {
+      if (playQueue.length === 0) {
+        isPlaying = false;
+        setStatus("\u6e96\u5099\u304c\u3067\u304d\u305f\u3089\u8a71\u3057\u304b\u3051\u3066\u307f\u3066\u304f\u3060\u3055\u3044\u3002");
+        return;
+      }
+      isPlaying = true;
+      const samples = playQueue.shift();
+
+      // Reuse single playback context to avoid browser AudioContext limit
+      if (!playCtx || playCtx.state === "closed") {
+        playCtx = new AudioContext({ sampleRate: 24000 });
+      }
+      const buf = playCtx.createBuffer(1, samples.length, 24000);
+      buf.getChannelData(0).set(samples);
+      const src = playCtx.createBufferSource();
+      src.buffer = buf;
+      src.connect(playCtx.destination);
+      src.onended = () => playNext();
+      src.start();
+    }
+  </script>
+</body>
+</html>
