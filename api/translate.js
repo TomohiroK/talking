@@ -19,7 +19,7 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: "text is required" });
   }
 
-  const model = process.env.GEMINI_TRANSLATE_MODEL || "gemini-2.0-flash";
+  const model = process.env.GEMINI_TRANSLATE_MODEL || "gemini-2.5-flash";
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
   const langName = LANG_NAMES[sourceLang] || "English";
 
