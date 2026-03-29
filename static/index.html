@@ -355,6 +355,33 @@
     }
     .lang-btn__flag { font-size: 16px; }
 
+    /* Age selector */
+    .age-selector {
+      display: flex;
+      justify-content: center;
+      gap: 6px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+    .age-btn {
+      display: flex; align-items: center; gap: 5px;
+      padding: 6px 14px;
+      border-radius: var(--radius-badge);
+      border: 1px solid var(--color-border-subtle);
+      background: var(--color-bg-card);
+      color: var(--color-text-secondary);
+      font-size: 12px; font-weight: 500;
+      cursor: pointer;
+      transition: all var(--duration-fast) var(--ease-out);
+    }
+    .age-btn:hover { border-color: rgba(255,255,255,0.2); color: var(--color-text-primary); }
+    .age-btn--active {
+      border-color: rgba(255,255,255,0.4);
+      background: rgba(255,255,255,0.1);
+      color: var(--color-text-primary);
+      font-weight: 700;
+    }
+
     @media (prefers-reduced-motion: reduce) {
       .char-card, .char-card::after, .char-card .char-card__avatar, .char-card__badge-dot {
         transition: none; animation: none;
@@ -398,6 +425,13 @@
       </button>
     </div>
 
+    <div class="age-selector" id="age-selector">
+      <button class="age-btn" data-age="toddler" onclick="selectAge('toddler')">&#128118; ~5&#27507;</button>
+      <button class="age-btn" data-age="teen" onclick="selectAge('teen')">&#127891; 7-15&#27507;</button>
+      <button class="age-btn" data-age="young" onclick="selectAge('young')">&#128640; 16-25&#27507;</button>
+      <button class="age-btn age-btn--active" data-age="adult" onclick="selectAge('adult')">&#128172; 25&#27507;+</button>
+    </div>
+
     <div class="controls__cards">
       <article class="char-card char-card--angie" tabindex="0"
         onclick="start('Kore')"
@@ -433,9 +467,10 @@
     let awaitingTranslation = null;
     let lateTranslateTimer = null;
 
-    // Language state
+    // Language & age state
     let selectedLang = "en";
     let currentLang = "en";
+    let selectedAge = "adult";
 
     // Character prompts (moved from server — not secret)
     const CHARACTER_PROMPTS = {
@@ -451,14 +486,31 @@
       },
     };
 
+    // Age-based prompt modifiers appended to the character prompt
+    const AGE_MODIFIERS = {
+      toddler: "IMPORTANT: The listener is a very young child (under 6 years old). Use only the simplest words (cat, dog, big, small, yummy, fun). Keep every sentence under 5 words. Speak in a very warm, gentle, encouraging tone. Never correct grammar — just repeat the correct form naturally. Talk about animals, colors, food, and family. Celebrate everything they say with enthusiasm.",
+      teen: "IMPORTANT: The listener is a school-age child (7-15 years old). Use simple but varied vocabulary. Keep sentences short (under 10 words). Be encouraging and patient. When correcting grammar, do it gently like a friendly tutor. Use topics they might like: games, school, sports, animals, movies.",
+      young: "IMPORTANT: The listener is a young adult (16-25 years old). Use natural conversational language with some slang. Keep it casual and relatable. Talk about trending topics, social media, career, travel. Correct grammar casually like a friend would.",
+      adult: "", // default — no modifier
+    };
+
     function getSystemPrompt(voice, lang) {
-      return CHARACTER_PROMPTS[voice]?.[lang] || CHARACTER_PROMPTS.Kore.en;
+      const base = CHARACTER_PROMPTS[voice]?.[lang] || CHARACTER_PROMPTS.Kore.en;
+      const modifier = AGE_MODIFIERS[selectedAge] || "";
+      return modifier ? base + "\n\n" + modifier : base;
     }
 
     function selectLang(lang) {
       selectedLang = lang;
       document.querySelectorAll(".lang-btn").forEach(btn => {
         btn.classList.toggle("lang-btn--active", btn.dataset.lang === lang);
+      });
+    }
+
+    function selectAge(age) {
+      selectedAge = age;
+      document.querySelectorAll(".age-btn").forEach(btn => {
+        btn.classList.toggle("age-btn--active", btn.dataset.age === age);
       });
     }
 
