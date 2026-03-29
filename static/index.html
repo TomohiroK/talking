@@ -686,10 +686,12 @@
         setStatus("Waiting for AI...");
       };
 
-      ws.onmessage = (e) => {
+      ws.onmessage = async (e) => {
         let msg;
         try {
-          msg = JSON.parse(e.data);
+          // Gemini may send data as Blob in browser; convert to string first
+          const raw = typeof e.data === "string" ? e.data : await e.data.text();
+          msg = JSON.parse(raw);
         } catch {
           return;
         }
