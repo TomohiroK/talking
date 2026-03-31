@@ -736,6 +736,22 @@
         chip.onclick = () => {
           container.remove();
           addMsg(topic, "user");
+          if (ws?.readyState === WebSocket.OPEN) {
+            // Pause audio streaming before sending text
+            isRecording = false;
+            try {
+              ws.send(JSON.stringify({
+                clientContent: {
+                  turns: [{ role: "user", parts: [{ text: topic }] }],
+                  turnComplete: true,
+                },
+              }));
+            } catch (e) {
+              console.error("Topic send failed:", e);
+            }
+            // Resume audio after short delay
+            setTimeout(() => { isRecording = true; }, 500);
+          }
         };
         chips.appendChild(chip);
       }
