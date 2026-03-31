@@ -8,5 +8,6 @@ export default function handler(req, res) {
   if (!checkAuth(req)) return sendUnauthorized(res);
 
   res.setHeader("Content-Type", "text/html; charset=utf-8");
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
   return res.send(html);
 }
