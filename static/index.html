@@ -88,6 +88,48 @@
       font-weight: 700;
     }
 
+    /* Trend topic chips */
+    .trend-container {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 12px 0;
+      align-items: flex-start;
+    }
+    .trend-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--color-text-muted);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    .trend-chips {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      width: 100%;
+    }
+    .trend-chip {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 12px;
+      padding: 10px 14px;
+      color: var(--color-text-primary);
+      font-size: 14px;
+      line-height: 1.4;
+      cursor: pointer;
+      text-align: left;
+      transition: all var(--duration-fast) var(--ease-out);
+      white-space: normal;
+    }
+    .trend-chip:hover {
+      background: rgba(255,255,255,0.1);
+      border-color: rgba(255,255,255,0.25);
+    }
+    .trend-chip:active {
+      transform: scale(0.97);
+    }
+
     /* Mic toggle button */
     #mic-toggle {
       display: none;
@@ -675,6 +717,42 @@
       }
     }
 
+    function showTrendChips() {
+      if (!trendTopics?.[selectedAge]) return;
+      const topics = trendTopics[selectedAge];
+      const container = document.createElement("div");
+      container.className = "trend-container";
+      container.id = "trend-chips";
+      const label = document.createElement("div");
+      label.className = "trend-label";
+      label.textContent = "Pick a topic to talk about";
+      container.appendChild(label);
+      const chips = document.createElement("div");
+      chips.className = "trend-chips";
+      for (const topic of topics) {
+        const chip = document.createElement("button");
+        chip.className = "trend-chip";
+        chip.textContent = topic;
+        chip.onclick = () => {
+          if (ws?.readyState !== WebSocket.OPEN) return;
+          ws.send(JSON.stringify({
+            clientContent: {
+              turns: [{ role: "user", parts: [{ text: "Let's talk about this: " + topic }] }],
+              turnComplete: true,
+            },
+          }));
+          container.remove();
+        };
+        chips.appendChild(chip);
+      }
+      container.appendChild(chips);
+      document.getElementById("transcript").appendChild(container);
+    }
+
+    function removeTrendChips() {
+      document.getElementById("trend-chips")?.remove();
+    }
+
     function showMicToggle() {
       const btn = document.getElementById("mic-toggle");
       btn.classList.add("visible");
@@ -814,6 +892,7 @@
       playCtx?.close();
       playCtx = null;
       hideMicToggle();
+      removeTrendChips();
       stopRecording();
       audioCtx?.close();
       audioCtx = null;
@@ -879,6 +958,7 @@
     }
 
     function handleAiText(text) {
+      removeTrendChips();
       const targetMsg = currentAiMsg || awaitingTranslation;
       if (!targetMsg) {
         currentAiMsg = document.createElement("div");
@@ -994,6 +1074,7 @@
           setStatus("\u6e96\u5099\u304c\u3067\u304d\u305f\u3089\u8a71\u3057\u304b\u3051\u3066\u307f\u3066\u304f\u3060\u3055\u3044\u3002");
           startRecording();
           showMicToggle();
+          showTrendChips();
           return;
         }
 
