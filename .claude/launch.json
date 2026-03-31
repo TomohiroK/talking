@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "echotalk-dev",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["vercel", "dev", "--cwd", "/Users/tomohirok/Documents/Github/talking"],
+      "port": 3000
+    }
+  ]
+}

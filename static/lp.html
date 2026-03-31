@@ -1,0 +1,1013 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EchoTalk — AIと、リアルに話そう。</title>
+  <meta name="description" content="2人のAIキャラクターと音声でリアルタイム英会話。文法フィードバック、自動翻訳、ワードブックマーク。ブラウザだけで、今すぐ始められます。">
+  <meta property="og:title" content="EchoTalk — AIと、リアルに話そう。">
+  <meta property="og:description" content="2人のAIキャラクターと音声でリアルタイム英会話。文法フィードバック、自動翻訳、ワードブックマーク。">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://talking-phi.vercel.app/lp">
+  <meta property="og:locale" content="ja_JP">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="canonical" href="https://talking-phi.vercel.app/lp">
+  <link rel="alternate" hreflang="en" href="https://talking-phi.vercel.app/lp/en">
+  <link rel="alternate" hreflang="ja" href="https://talking-phi.vercel.app/lp">
+  <style>
+    /* ===== Design Tokens (from EchoTalk main app) ===== */
+    :root {
+      --color-bg-app: #111111;
+      --color-bg-card: #1e1e1e;
+      --color-border-subtle: rgba(255,255,255,0.08);
+      --color-text-primary: #f0f0f0;
+      --color-text-secondary: rgba(255,255,255,0.55);
+      --color-text-muted: rgba(255,255,255,0.35);
+
+      --color-angie-primary: #e040fb;
+      --color-angie-glow: rgba(224,64,251,0.35);
+      --gradient-angie: linear-gradient(135deg, #e040fb 0%, #7c4dff 100%);
+      --gradient-angie-card: linear-gradient(160deg, rgba(224,64,251,0.12) 0%, rgba(124,77,255,0.06) 100%);
+
+      --color-andy-primary: #ff6d00;
+      --color-andy-glow: rgba(255,109,0,0.35);
+      --gradient-andy: linear-gradient(135deg, #ff6d00 0%, #ffd600 100%);
+      --gradient-andy-card: linear-gradient(160deg, rgba(255,109,0,0.12) 0%, rgba(255,214,0,0.06) 100%);
+
+      --radius-card: 20px;
+      --radius-badge: 100px;
+      --radius-btn: 16px;
+      --duration-normal: 250ms;
+      --duration-fast: 150ms;
+      --ease-out: cubic-bezier(0.2,0,0,1);
+      --ease-spring: cubic-bezier(0.34,1.56,0.64,1);
+
+      --lp-max-width: 1120px;
+    }
+
+    /* ===== Reset ===== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      background: var(--color-bg-app);
+      color: var(--color-text-primary);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+    a { color: inherit; text-decoration: none; }
+    img { max-width: 100%; height: auto; }
+
+    /* ===== Utility ===== */
+    .lp-container {
+      max-width: var(--lp-max-width);
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+
+    /* ===== Scroll Reveal ===== */
+    .lp-reveal {
+      opacity: 0;
+      transform: translateY(32px);
+      transition: opacity 0.7s var(--ease-out), transform 0.7s var(--ease-out);
+    }
+    .lp-reveal.is-visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* ===== Header (Glassmorphism) ===== */
+    .lp-header {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      background: rgba(17,17,17,0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--color-border-subtle);
+    }
+    .lp-header__inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 56px;
+      max-width: var(--lp-max-width);
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+    .lp-header__logo {
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      background: linear-gradient(135deg, #e040fb 0%, #ff6d00 100%);
+      background-clip: text;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .lp-header__nav {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .lp-header__lang {
+      display: flex;
+      gap: 4px;
+    }
+    .lp-header__lang a {
+      padding: 4px 10px;
+      border-radius: var(--radius-badge);
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--color-text-muted);
+      transition: all var(--duration-fast) var(--ease-out);
+    }
+    .lp-header__lang a:hover { color: var(--color-text-primary); }
+    .lp-header__lang a.is-active {
+      background: rgba(255,255,255,0.1);
+      color: var(--color-text-primary);
+    }
+    .lp-header__cta {
+      display: none;
+      padding: 6px 16px;
+      border-radius: var(--radius-badge);
+      font-size: 13px;
+      font-weight: 700;
+      color: #fff;
+      background: linear-gradient(135deg, #e040fb 0%, #ff6d00 100%);
+      white-space: nowrap;
+      transition: opacity var(--duration-fast) var(--ease-out);
+    }
+    .lp-header__cta:hover { opacity: 0.85; }
+    @media (min-width: 480px) {
+      .lp-header__cta { display: inline-block; }
+    }
+
+    /* ===== Hero ===== */
+    .lp-hero {
+      position: relative;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 100px 20px 80px;
+      overflow: hidden;
+    }
+    .lp-hero__bg-orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(100px);
+      opacity: 0.3;
+      pointer-events: none;
+      animation: float 8s ease-in-out infinite;
+    }
+    .lp-hero__bg-orb--purple {
+      width: 400px; height: 400px;
+      background: var(--color-angie-primary);
+      top: -100px; left: -100px;
+    }
+    .lp-hero__bg-orb--orange {
+      width: 350px; height: 350px;
+      background: var(--color-andy-primary);
+      bottom: -80px; right: -80px;
+      animation-delay: -4s;
+    }
+    .lp-hero__content {
+      position: relative;
+      z-index: 1;
+      max-width: 640px;
+    }
+    .lp-hero__eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: var(--radius-badge);
+      background: rgba(255,255,255,0.06);
+      border: 1px solid var(--color-border-subtle);
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--color-text-secondary);
+      letter-spacing: 0.04em;
+      margin-bottom: 24px;
+    }
+    .lp-hero__eyebrow-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #e040fb, #ff6d00);
+      animation: badge-pulse 2s ease-in-out infinite;
+    }
+    .lp-hero__title {
+      font-size: clamp(36px, 8vw, 64px);
+      font-weight: 900;
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+      margin-bottom: 20px;
+    }
+    .lp-hero__title-gradient {
+      background: linear-gradient(135deg, #e040fb 0%, #ff6d00 50%, #ffd600 100%);
+      background-clip: text;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .lp-hero__subtitle {
+      font-size: clamp(15px, 3vw, 18px);
+      color: var(--color-text-secondary);
+      line-height: 1.7;
+      margin-bottom: 36px;
+    }
+    .lp-hero__actions {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 12px;
+      margin-bottom: 32px;
+    }
+    .lp-btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 14px 28px;
+      border-radius: var(--radius-btn);
+      font-size: 16px;
+      font-weight: 700;
+      color: #fff;
+      background: linear-gradient(135deg, #e040fb 0%, #ff6d00 100%);
+      box-shadow: 0 4px 24px -4px rgba(224,64,251,0.4), 0 2px 8px rgba(0,0,0,0.3);
+      white-space: nowrap;
+      transition: all var(--duration-normal) var(--ease-spring);
+    }
+    .lp-btn-primary:hover {
+      transform: translateY(-2px) scale(1.02);
+      box-shadow: 0 8px 32px -4px rgba(224,64,251,0.5), 0 4px 12px rgba(0,0,0,0.4);
+    }
+    .lp-btn-ghost {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 14px 28px;
+      border-radius: var(--radius-btn);
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--color-text-secondary);
+      border: 1px solid var(--color-border-subtle);
+      background: transparent;
+      white-space: nowrap;
+      transition: all var(--duration-normal) var(--ease-out);
+    }
+    .lp-btn-ghost:hover {
+      border-color: rgba(255,255,255,0.25);
+      color: var(--color-text-primary);
+      background: rgba(255,255,255,0.04);
+    }
+    .lp-hero__trust {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+    .lp-hero__trust-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      color: var(--color-text-muted);
+    }
+    .lp-hero__trust-icon {
+      font-size: 16px;
+    }
+
+    /* ===== Section Common ===== */
+    .lp-section {
+      padding: clamp(64px, 10vw, 120px) 20px;
+    }
+    .lp-section__eyebrow {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--color-text-muted);
+      text-align: center;
+      margin-bottom: 12px;
+    }
+    .lp-section__title {
+      font-size: clamp(24px, 5vw, 40px);
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      text-align: center;
+      margin-bottom: 16px;
+    }
+    .lp-section__subtitle {
+      font-size: 15px;
+      color: var(--color-text-secondary);
+      text-align: center;
+      max-width: 560px;
+      margin: 0 auto 48px;
+      line-height: 1.7;
+    }
+
+    /* ===== Steps ===== */
+    .lp-steps {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 32px;
+      max-width: var(--lp-max-width);
+      margin: 0 auto;
+    }
+    @media (min-width: 640px) {
+      .lp-steps { grid-template-columns: repeat(3, 1fr); gap: 24px; }
+    }
+    .lp-step {
+      position: relative;
+      background: var(--color-bg-card);
+      border: 1px solid var(--color-border-subtle);
+      border-radius: var(--radius-card);
+      padding: 32px 24px;
+      text-align: center;
+    }
+    .lp-step__number {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 48px; height: 48px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #e040fb 0%, #ff6d00 100%);
+      font-size: 20px;
+      font-weight: 900;
+      color: #fff;
+      margin-bottom: 20px;
+    }
+    .lp-step__title {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .lp-step__desc {
+      font-size: 14px;
+      color: var(--color-text-secondary);
+      line-height: 1.6;
+    }
+    .lp-step__visual {
+      margin-top: 20px;
+      font-size: 48px;
+      line-height: 1;
+    }
+    /* Step connector lines (desktop) */
+    @media (min-width: 640px) {
+      .lp-step:not(:last-child)::after {
+        content: "";
+        position: absolute;
+        top: 56px;
+        right: -12px;
+        width: 24px;
+        height: 2px;
+        background: linear-gradient(90deg, rgba(224,64,251,0.4), rgba(255,109,0,0.4));
+        pointer-events: none;
+      }
+    }
+
+    /* ===== Features Grid ===== */
+    .lp-features {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 16px;
+      max-width: var(--lp-max-width);
+      margin: 0 auto;
+    }
+    @media (min-width: 480px) {
+      .lp-features { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (min-width: 900px) {
+      .lp-features { grid-template-columns: repeat(3, 1fr); }
+    }
+    .lp-feature {
+      background: var(--color-bg-card);
+      border: 1px solid var(--color-border-subtle);
+      border-radius: var(--radius-card);
+      padding: 28px 24px;
+      transition: all var(--duration-normal) var(--ease-out);
+    }
+    .lp-feature:hover {
+      border-color: rgba(255,255,255,0.15);
+      transform: translateY(-2px);
+    }
+    .lp-feature__icon {
+      font-size: 32px;
+      margin-bottom: 16px;
+    }
+    .lp-feature__title {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .lp-feature__desc {
+      font-size: 14px;
+      color: var(--color-text-secondary);
+      line-height: 1.6;
+    }
+
+    /* ===== Characters ===== */
+    .lp-characters {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 24px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    @media (min-width: 640px) {
+      .lp-characters { grid-template-columns: 1fr 1fr; }
+    }
+    .lp-char {
+      position: relative;
+      border-radius: var(--radius-card);
+      background: var(--color-bg-card);
+      border: 1px solid var(--color-border-subtle);
+      padding: 36px 24px 28px;
+      text-align: center;
+      overflow: hidden;
+      transition:
+        transform var(--duration-normal) var(--ease-spring),
+        box-shadow var(--duration-normal) var(--ease-out),
+        border-color var(--duration-normal) var(--ease-out);
+    }
+    .lp-char::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      pointer-events: none;
+    }
+    .lp-char::after {
+      content: "";
+      position: absolute;
+      top: -40px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 120px; height: 80px;
+      border-radius: 50%;
+      filter: blur(28px);
+      opacity: 0.5;
+      pointer-events: none;
+      transition: opacity var(--duration-normal) var(--ease-out);
+    }
+    .lp-char:hover { transform: translateY(-4px) scale(1.01); }
+    .lp-char:hover::after { opacity: 0.9; }
+
+    .lp-char--angie::before { background: var(--gradient-angie-card); }
+    .lp-char--angie::after { background: var(--color-angie-primary); }
+    .lp-char--angie:hover {
+      border-color: rgba(224,64,251,0.4);
+      box-shadow: 0 16px 48px -8px rgba(224,64,251,0.3);
+    }
+    .lp-char--andy::before { background: var(--gradient-andy-card); }
+    .lp-char--andy::after { background: var(--color-andy-primary); }
+    .lp-char--andy:hover {
+      border-color: rgba(255,109,0,0.4);
+      box-shadow: 0 16px 48px -8px rgba(255,109,0,0.25);
+    }
+
+    .lp-char__avatar {
+      position: relative; z-index: 1;
+      font-size: 56px; line-height: 1;
+      filter: drop-shadow(0 4px 12px rgba(0,0,0,0.4));
+      margin-bottom: 12px;
+    }
+    .lp-char__name {
+      position: relative; z-index: 1;
+      font-size: 24px; font-weight: 800;
+      letter-spacing: -0.02em;
+      background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      margin-bottom: 4px;
+    }
+    .lp-char--angie .lp-char__name { background-image: var(--gradient-angie); }
+    .lp-char--andy .lp-char__name { background-image: var(--gradient-andy); }
+
+    .lp-char__role {
+      position: relative; z-index: 1;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--color-text-muted);
+      letter-spacing: 0.06em;
+      margin-bottom: 16px;
+    }
+    .lp-char__desc {
+      position: relative; z-index: 1;
+      font-size: 14px;
+      color: var(--color-text-secondary);
+      line-height: 1.7;
+      margin-bottom: 16px;
+    }
+    .lp-char__badge {
+      position: relative; z-index: 1;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 10px 4px 8px;
+      border-radius: var(--radius-badge);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+    }
+    .lp-char__badge-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      animation: badge-pulse 2s ease-in-out infinite;
+    }
+    .lp-char--angie .lp-char__badge {
+      background: rgba(224,64,251,0.15);
+      color: #e77ff5;
+      border: 1px solid rgba(224,64,251,0.25);
+    }
+    .lp-char--angie .lp-char__badge-dot { background: var(--color-angie-primary); }
+    .lp-char--andy .lp-char__badge {
+      background: rgba(255,109,0,0.15);
+      color: #ff9a50;
+      border: 1px solid rgba(255,109,0,0.25);
+    }
+    .lp-char--andy .lp-char__badge-dot { background: var(--color-andy-primary); }
+
+    .lp-char__langs {
+      position: relative; z-index: 1;
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid var(--color-border-subtle);
+    }
+    .lp-char__lang-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--color-text-muted);
+      letter-spacing: 0.08em;
+      margin-bottom: 8px;
+    }
+    .lp-char__lang-item {
+      font-size: 13px;
+      color: var(--color-text-secondary);
+      line-height: 1.6;
+      margin-bottom: 4px;
+    }
+    .lp-char__lang-item strong {
+      color: var(--color-text-primary);
+      font-weight: 600;
+    }
+
+    /* ===== Manual / Accordion ===== */
+    .lp-manual {
+      max-width: 720px;
+      margin: 0 auto;
+    }
+    .lp-accordion {
+      border: 1px solid var(--color-border-subtle);
+      border-radius: var(--radius-card);
+      overflow: hidden;
+      background: var(--color-bg-card);
+    }
+    .lp-accordion__item {
+      border-bottom: 1px solid var(--color-border-subtle);
+    }
+    .lp-accordion__item:last-child { border-bottom: none; }
+    .lp-accordion__trigger {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      padding: 18px 20px;
+      background: none;
+      border: none;
+      color: var(--color-text-primary);
+      font-size: 15px;
+      font-weight: 600;
+      text-align: left;
+      cursor: pointer;
+      transition: background var(--duration-fast) var(--ease-out);
+    }
+    .lp-accordion__trigger:hover {
+      background: rgba(255,255,255,0.03);
+    }
+    .lp-accordion__chevron {
+      font-size: 18px;
+      color: var(--color-text-muted);
+      transition: transform var(--duration-normal) var(--ease-spring);
+      flex-shrink: 0;
+      margin-left: 12px;
+    }
+    .lp-accordion__item.is-open .lp-accordion__chevron {
+      transform: rotate(180deg);
+    }
+    .lp-accordion__content {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.4s var(--ease-out);
+    }
+    .lp-accordion__content-inner {
+      padding: 0 20px 20px;
+      font-size: 14px;
+      color: var(--color-text-secondary);
+      line-height: 1.7;
+    }
+    .lp-accordion__content-inner p { margin-bottom: 10px; }
+    .lp-accordion__content-inner p:last-child { margin-bottom: 0; }
+    .lp-accordion__content-inner strong { color: var(--color-text-primary); font-weight: 600; }
+
+    /* ===== Final CTA ===== */
+    .lp-final-cta {
+      position: relative;
+      text-align: center;
+      padding: clamp(80px, 12vw, 140px) 20px;
+      overflow: hidden;
+    }
+    .lp-final-cta__orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(120px);
+      opacity: 0.2;
+      pointer-events: none;
+    }
+    .lp-final-cta__orb--purple {
+      width: 500px; height: 500px;
+      background: var(--color-angie-primary);
+      top: -150px; right: -150px;
+      animation: float 10s ease-in-out infinite;
+    }
+    .lp-final-cta__orb--orange {
+      width: 400px; height: 400px;
+      background: var(--color-andy-primary);
+      bottom: -120px; left: -120px;
+      animation: float 10s ease-in-out infinite;
+      animation-delay: -5s;
+    }
+    .lp-final-cta__content {
+      position: relative;
+      z-index: 1;
+    }
+    .lp-final-cta__title {
+      font-size: clamp(24px, 5vw, 40px);
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin-bottom: 12px;
+    }
+    .lp-final-cta__subtitle {
+      font-size: 15px;
+      color: var(--color-text-secondary);
+      margin-bottom: 32px;
+    }
+    .lp-final-cta__note {
+      margin-top: 16px;
+      font-size: 13px;
+      color: var(--color-text-muted);
+    }
+
+    /* ===== Footer ===== */
+    .lp-footer {
+      border-top: 1px solid var(--color-border-subtle);
+      padding: 32px 20px;
+      text-align: center;
+    }
+    .lp-footer__logo {
+      font-size: 16px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      background: linear-gradient(135deg, #e040fb 0%, #ff6d00 100%);
+      background-clip: text;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 8px;
+    }
+    .lp-footer__copy {
+      font-size: 12px;
+      color: var(--color-text-muted);
+    }
+
+    /* ===== Animations ===== */
+    @keyframes badge-pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.6; transform: scale(0.8); }
+    }
+    @keyframes float {
+      0%, 100% { transform: translate(0, 0); }
+      33% { transform: translate(15px, -20px); }
+      66% { transform: translate(-10px, 10px); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.001ms !important;
+        transition-duration: 0.001ms !important;
+      }
+      .lp-reveal { opacity: 1; transform: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="lp-header">
+    <div class="lp-header__inner">
+      <a href="/lp" class="lp-header__logo">EchoTalk</a>
+      <nav class="lp-header__nav">
+        <div class="lp-header__lang">
+          <a href="/lp" class="is-active">JP</a>
+          <a href="/lp/en">EN</a>
+        </div>
+        <a href="/" class="lp-header__cta">始める</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Hero -->
+  <section class="lp-hero">
+    <div class="lp-hero__bg-orb lp-hero__bg-orb--purple" aria-hidden="true"></div>
+    <div class="lp-hero__bg-orb lp-hero__bg-orb--orange" aria-hidden="true"></div>
+    <div class="lp-hero__content">
+      <div class="lp-hero__eyebrow">
+        <span class="lp-hero__eyebrow-dot" aria-hidden="true"></span>
+        AI英会話の新しいカタチ
+      </div>
+      <h1 class="lp-hero__title">
+        <span class="lp-hero__title-gradient">AIと、リアルに話そう。</span>
+      </h1>
+      <p class="lp-hero__subtitle">
+        2人のAIキャラクターと、音声でリアルタイム英会話。<br>
+        文法フィードバックも、翻訳も、ぜんぶ自動。
+      </p>
+      <div class="lp-hero__actions">
+        <a href="/" class="lp-btn-primary">🎤 今すぐ話してみる</a>
+        <a href="#guide" class="lp-btn-ghost">使い方を見る ↓</a>
+      </div>
+      <div class="lp-hero__trust">
+        <span class="lp-hero__trust-item"><span class="lp-hero__trust-icon">✨</span> 登録不要</span>
+        <span class="lp-hero__trust-item"><span class="lp-hero__trust-icon">🆓</span> 完全無料</span>
+        <span class="lp-hero__trust-item"><span class="lp-hero__trust-icon">📱</span> スマホ対応</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3 Steps -->
+  <section class="lp-section" id="steps">
+    <div class="lp-container lp-reveal">
+      <p class="lp-section__eyebrow">How it works</p>
+      <h2 class="lp-section__title">3ステップで、すぐ話せる</h2>
+      <p class="lp-section__subtitle">むずかしい設定は一切なし。開いて、選んで、話すだけ。</p>
+      <div class="lp-steps">
+        <div class="lp-step">
+          <div class="lp-step__number">1</div>
+          <h3 class="lp-step__title">相手を選ぶ</h3>
+          <p class="lp-step__desc">Angie か Andy、話したいキャラクターを選びます。性格も話し方も違うから、気分で選べる。</p>
+          <div class="lp-step__visual">👩 👨</div>
+        </div>
+        <div class="lp-step">
+          <div class="lp-step__number">2</div>
+          <h3 class="lp-step__title">言語と年齢を設定</h3>
+          <p class="lp-step__desc">英語・インドネシア語・日本語から選択。年齢に合わせて、AIの話し方が変わります。</p>
+          <div class="lp-step__visual">🌏</div>
+        </div>
+        <div class="lp-step">
+          <div class="lp-step__number">3</div>
+          <h3 class="lp-step__title">カウントダウンでスタート</h3>
+          <p class="lp-step__desc">3...2...1...GO! あとは自由に話すだけ。マイクに向かって、思ったことを言ってみよう。</p>
+          <div class="lp-step__visual">🚀</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section class="lp-section" id="features">
+    <div class="lp-container lp-reveal">
+      <p class="lp-section__eyebrow">Features</p>
+      <h2 class="lp-section__title">EchoTalkの機能</h2>
+      <p class="lp-section__subtitle">英会話に必要なものを、ぜんぶ詰め込みました。</p>
+      <div class="lp-features">
+        <div class="lp-feature">
+          <div class="lp-feature__icon">🎤</div>
+          <h3 class="lp-feature__title">リアルタイム音声会話</h3>
+          <p class="lp-feature__desc">テキスト入力じゃなく、本物の会話。あなたの声をAIがリアルタイムで聞いて、音声で返してくれます。</p>
+        </div>
+        <div class="lp-feature">
+          <div class="lp-feature__icon">🌐</div>
+          <h3 class="lp-feature__title">自動翻訳</h3>
+          <p class="lp-feature__desc">AIの英語がわからなくても大丈夫。日本語の翻訳がメッセージの下に自動で表示されます。</p>
+        </div>
+        <div class="lp-feature">
+          <div class="lp-feature__icon">✅</div>
+          <h3 class="lp-feature__title">文法フィードバック</h3>
+          <p class="lp-feature__desc">先生じゃなく、友達みたいに。間違いを自然に直してくれるから、プレッシャーなし。</p>
+        </div>
+        <div class="lp-feature">
+          <div class="lp-feature__icon">📖</div>
+          <h3 class="lp-feature__title">ワードブックマーク</h3>
+          <p class="lp-feature__desc">会話中に出てきた英単語を保存。あとで見返して、ボキャブラリーを増やせます。</p>
+        </div>
+        <div class="lp-feature">
+          <div class="lp-feature__icon">🗣️</div>
+          <h3 class="lp-feature__title">3言語対応</h3>
+          <p class="lp-feature__desc">英語のほか、インドネシア語と日本語にも対応。日本語モードではキャラクターが方言で話します。</p>
+        </div>
+        <div class="lp-feature">
+          <div class="lp-feature__icon">👥</div>
+          <h3 class="lp-feature__title">4段階の年齢設定</h3>
+          <p class="lp-feature__desc">幼児から大人まで。年齢に合わせてAIの語彙や話し方が変わるから、誰でも楽しめます。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Characters -->
+  <section class="lp-section" id="characters">
+    <div class="lp-container lp-reveal">
+      <p class="lp-section__eyebrow">Characters</p>
+      <h2 class="lp-section__title">2人の会話パートナー</h2>
+      <p class="lp-section__subtitle">個性豊かな2人のAIキャラクター。気分やレベルに合わせて選べます。</p>
+      <div class="lp-characters">
+        <!-- Angie -->
+        <div class="lp-char lp-char--angie">
+          <div class="lp-char__avatar">👩</div>
+          <div class="lp-char__name">Angie</div>
+          <div class="lp-char__role">POP SINGER ・ LA</div>
+          <p class="lp-char__desc">明るくてエネルギッシュ。音楽、ファッション、SNSの話が大好き。トレンドに敏感で、会話のテンポが心地いい。</p>
+          <div class="lp-char__badge">
+            <span class="lp-char__badge-dot" aria-hidden="true"></span>
+            Voice: Kore
+          </div>
+          <div class="lp-char__langs">
+            <div class="lp-char__lang-label">言語モード別キャラクター</div>
+            <p class="lp-char__lang-item"><strong>🇬🇧 英語:</strong> LAのポップシンガー</p>
+            <p class="lp-char__lang-item"><strong>🇯🇵 日本語:</strong> 京都生まれの京言葉女性</p>
+            <p class="lp-char__lang-item"><strong>🇮🇩 インドネシア語:</strong> LAのポップシンガー</p>
+          </div>
+        </div>
+        <!-- Andy -->
+        <div class="lp-char lp-char--andy">
+          <div class="lp-char__avatar">👨</div>
+          <div class="lp-char__name">Andy</div>
+          <div class="lp-char__role">FOOD YOUTUBER ・ NYC</div>
+          <p class="lp-char__desc">面白くてリラックスした雰囲気。ストリートフード、旅、街のカルチャーの話が止まらない。笑いのセンスも抜群。</p>
+          <div class="lp-char__badge">
+            <span class="lp-char__badge-dot" aria-hidden="true"></span>
+            Voice: Puck
+          </div>
+          <div class="lp-char__langs">
+            <div class="lp-char__lang-label">言語モード別キャラクター</div>
+            <p class="lp-char__lang-item"><strong>🇬🇧 英語:</strong> NYCのフードYouTuber</p>
+            <p class="lp-char__lang-item"><strong>🇯🇵 日本語:</strong> 大阪生まれの関西弁男性</p>
+            <p class="lp-char__lang-item"><strong>🇮🇩 インドネシア語:</strong> NYCのフードYouTuber</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Manual / Guide -->
+  <section class="lp-section" id="guide">
+    <div class="lp-container lp-reveal">
+      <p class="lp-section__eyebrow">Guide</p>
+      <h2 class="lp-section__title">使い方ガイド</h2>
+      <p class="lp-section__subtitle">はじめてでも安心。よくある質問をまとめました。</p>
+      <div class="lp-manual">
+        <div class="lp-accordion">
+          <div class="lp-accordion__item">
+            <button class="lp-accordion__trigger" aria-expanded="false">
+              <span>🚀 はじめ方</span>
+              <span class="lp-accordion__chevron" aria-hidden="true">▾</span>
+            </button>
+            <div class="lp-accordion__content">
+              <div class="lp-accordion__content-inner">
+                <p>ページを開くと、まずキャラクター選択画面が表示されます。</p>
+                <p><strong>1.</strong> 練習したい言語を選びます（英語・インドネシア語・日本語）。</p>
+                <p><strong>2.</strong> 年齢帯を選びます。AIの語彙と話し方が年齢に合わせて変わります。</p>
+                <p><strong>3.</strong> Angie か Andy を選んでタップ。カウントダウンが始まり、会話がスタートします。</p>
+                <p>マイクの使用許可を求められたら「許可」を選んでください。</p>
+              </div>
+            </div>
+          </div>
+          <div class="lp-accordion__item">
+            <button class="lp-accordion__trigger" aria-expanded="false">
+              <span>💡 会話のコツ</span>
+              <span class="lp-accordion__chevron" aria-hidden="true">▾</span>
+            </button>
+            <div class="lp-accordion__content">
+              <div class="lp-accordion__content-inner">
+                <p><strong>短い文でOK。</strong> 完璧な文法じゃなくても、AIは理解してくれます。まずは話してみることが大切。</p>
+                <p><strong>質問してみよう。</strong> "What do you think about...?" や "Tell me about..." のように質問すると、AIがたくさん話してくれます。</p>
+                <p><strong>間違いを恐れない。</strong> AIは先生じゃなく友達。文法ミスがあっても自然に会話の中で直してくれます。</p>
+                <p><strong>日本語が混ざっても大丈夫。</strong> AIはあなたの日本語を理解します。英語で言えないことは日本語で言って、AIの英語の返事から学びましょう。</p>
+              </div>
+            </div>
+          </div>
+          <div class="lp-accordion__item">
+            <button class="lp-accordion__trigger" aria-expanded="false">
+              <span>🌐 翻訳の見方</span>
+              <span class="lp-accordion__chevron" aria-hidden="true">▾</span>
+            </button>
+            <div class="lp-accordion__content">
+              <div class="lp-accordion__content-inner">
+                <p>英語モードで会話中、AIの応答テキストの下にグレーの小さな文字で日本語翻訳が自動表示されます。</p>
+                <p>翻訳は英語を聞いて「だいたいこういう意味かな？」と確認するためのもの。翻訳だけに頼らず、まずは英語を聞いてみてください。</p>
+                <p>日本語モードで会話している場合、翻訳は表示されません。</p>
+              </div>
+            </div>
+          </div>
+          <div class="lp-accordion__item">
+            <button class="lp-accordion__trigger" aria-expanded="false">
+              <span>📖 ワードブックの使い方</span>
+              <span class="lp-accordion__chevron" aria-hidden="true">▾</span>
+            </button>
+            <div class="lp-accordion__content">
+              <div class="lp-accordion__content-inner">
+                <p>会話中、画面右側（モバイルでは右下のボタンから開く）にワードパネルが表示されます。</p>
+                <p>AIの応答に含まれる英単語が自動的にリストアップされます。気になる単語をタップすると、黄色くハイライトされてブックマークに追加されます。</p>
+                <p>ブックマークした単語は会話中ずっと保持されます。会話が終わるまでに、知らなかった単語をどんどんブックマークしておきましょう。</p>
+              </div>
+            </div>
+          </div>
+          <div class="lp-accordion__item">
+            <button class="lp-accordion__trigger" aria-expanded="false">
+              <span>⚙️ 言語・年齢の切り替え</span>
+              <span class="lp-accordion__chevron" aria-hidden="true">▾</span>
+            </button>
+            <div class="lp-accordion__content">
+              <div class="lp-accordion__content-inner">
+                <p>会話中に言語や年齢は変更できません。変更するには、左上の「← 戻る」ボタンで選択画面に戻ってください。</p>
+                <p><strong>年齢設定の目安:</strong></p>
+                <p>👶 <strong>~5歳:</strong> とてもシンプルな単語。動物、色、食べ物の話題中心。</p>
+                <p>🍦 <strong>7-15歳:</strong> やさしい語彙。ゲーム、学校、スポーツの話題。</p>
+                <p>🚀 <strong>16-25歳:</strong> 自然な会話。トレンド、SNS、キャリアの話題。</p>
+                <p>💬 <strong>25歳+:</strong> 制限なし。自由な会話を楽しめます。</p>
+              </div>
+            </div>
+          </div>
+          <div class="lp-accordion__item">
+            <button class="lp-accordion__trigger" aria-expanded="false">
+              <span>🔧 うまくいかないとき</span>
+              <span class="lp-accordion__chevron" aria-hidden="true">▾</span>
+            </button>
+            <div class="lp-accordion__content">
+              <div class="lp-accordion__content-inner">
+                <p><strong>マイクが反応しない:</strong> ブラウザのマイク許可設定を確認してください。アドレスバーのマイクアイコンをクリックして「許可」に変更できます。</p>
+                <p><strong>AIの声が聞こえない:</strong> デバイスの音量を確認してください。イヤホン/スピーカーが正しく接続されているか確認しましょう。</p>
+                <p><strong>接続が切れた:</strong> ページをリロードして、もう一度キャラクターを選んでください。</p>
+                <p><strong>音声が途切れる:</strong> Wi-Fi環境での使用をおすすめします。モバイルデータ通信では不安定になることがあります。</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Final CTA -->
+  <section class="lp-final-cta">
+    <div class="lp-final-cta__orb lp-final-cta__orb--purple" aria-hidden="true"></div>
+    <div class="lp-final-cta__orb lp-final-cta__orb--orange" aria-hidden="true"></div>
+    <div class="lp-final-cta__content lp-reveal">
+      <h2 class="lp-final-cta__title">さあ、AIと英語で話してみよう。</h2>
+      <p class="lp-final-cta__subtitle">Angie と Andy があなたを待っています。</p>
+      <a href="/" class="lp-btn-primary">🎤 EchoTalkを始める</a>
+      <p class="lp-final-cta__note">ブラウザだけで使えます。アプリのダウンロード不要。</p>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="lp-footer">
+    <div class="lp-footer__logo">EchoTalk</div>
+    <p class="lp-footer__copy">&copy; 2025 EchoTalk. All rights reserved.</p>
+  </footer>
+
+  <script>
+    // Scroll reveal with IntersectionObserver
+    const revealElements = document.querySelectorAll('.lp-reveal');
+    if ('IntersectionObserver' in window) {
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('is-visible');
+            observer.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+      revealElements.forEach(el => observer.observe(el));
+    } else {
+      revealElements.forEach(el => el.classList.add('is-visible'));
+    }
+
+    // Accordion toggle
+    document.querySelectorAll('.lp-accordion__trigger').forEach(trigger => {
+      trigger.addEventListener('click', () => {
+        const item = trigger.closest('.lp-accordion__item');
+        const content = item.querySelector('.lp-accordion__content');
+        const isOpen = item.classList.contains('is-open');
+
+        if (isOpen) {
+          content.style.maxHeight = '0';
+          item.classList.remove('is-open');
+          trigger.setAttribute('aria-expanded', 'false');
+        } else {
+          content.style.maxHeight = content.scrollHeight + 'px';
+          item.classList.add('is-open');
+          trigger.setAttribute('aria-expanded', 'true');
+        }
+      });
+    });
+  </script>
+</body>
+</html>
