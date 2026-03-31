@@ -735,21 +735,7 @@
         chip.type = "button";
         chip.onclick = () => {
           container.remove();
-          // Show as user message bubble
           addMsg(topic, "user");
-          // Send as text to Gemini via clientContent
-          try {
-            if (ws?.readyState === WebSocket.OPEN) {
-              ws.send(JSON.stringify({
-                clientContent: {
-                  turns: [{ role: "user", parts: [{ text: topic }] }],
-                  turnComplete: true,
-                },
-              }));
-            }
-          } catch (e) {
-            console.error("Failed to send topic:", e);
-          }
         };
         chips.appendChild(chip);
       }
