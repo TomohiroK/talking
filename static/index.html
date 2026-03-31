@@ -128,6 +128,10 @@
     .trend-chip:active {
       transform: scale(0.97);
     }
+    .trend-chip--active {
+      border-color: rgba(224,64,251,0.5);
+      background: rgba(224,64,251,0.12);
+    }
 
     /* Mic toggle button */
     #mic-toggle {
@@ -585,6 +589,8 @@
       <button class="age-btn age-btn--active" data-age="adult" onclick="selectAge('adult')">&#128172; 25&#27507;+</button>
     </div>
 
+    <div id="trend-chips-area"></div>
+
     <div class="controls__cards">
       <article class="char-card char-card--angie" tabindex="0"
         onclick="start('Kore')"
@@ -631,13 +637,18 @@
 
     // Trend topics (fetched asynchronously)
     let trendTopics = null;
+    let selectedTopic = null;
+    let selectedAge = "adult";
+
     (async () => {
       try {
         const res = await fetch("/api/trends");
-        if (res.ok) trendTopics = await res.json();
+        if (res.ok) {
+          trendTopics = await res.json();
+          renderTrendChips();
+        }
       } catch (e) { /* trends are optional */ }
     })();
-    let selectedAge = "adult";
 
     // Character prompts (moved from server — not secret)
     const CHARACTER_PROMPTS = {
@@ -665,7 +676,9 @@
       const base = CHARACTER_PROMPTS[voice]?.[lang] || CHARACTER_PROMPTS.Kore.en;
       const modifier = AGE_MODIFIERS[selectedAge] || "";
       let trendHint = "";
-      if (trendTopics?.[selectedAge]) {
+      if (selectedTopic) {
+        trendHint = "IMPORTANT: The user has chosen this topic to talk about. Start the conversation by naturally bringing up this topic: \"" + selectedTopic + "\". Greet the user and smoothly lead into this topic.";
+      } else if (trendTopics?.[selectedAge]) {
         const topics = trendTopics[selectedAge];
         trendHint = "CONVERSATION TOPICS: Here are some trending topics in Japan you can naturally bring up during the conversation to keep it engaging. Don't force them — weave them in when relevant:\n" + topics.map((t, i) => (i + 1) + ". " + t).join("\n");
       }
@@ -681,9 +694,11 @@
 
     function selectAge(age) {
       selectedAge = age;
+      selectedTopic = null;
       document.querySelectorAll(".age-btn").forEach(btn => {
         btn.classList.toggle("age-btn--active", btn.dataset.age === age);
       });
+      renderTrendChips();
     }
 
     // Mic toggle labels per language
@@ -716,51 +731,37 @@
       }
     }
 
-    function showTrendChips() {
-      if (!trendTopics?.[selectedAge]) return;
-      const topics = trendTopics[selectedAge];
+    function renderTrendChips() {
+      const area = document.getElementById("trend-chips-area");
+      area.innerHTML = "";
+      const topics = trendTopics?.[selectedAge];
+      if (!topics) return;
       const container = document.createElement("div");
       container.className = "trend-container";
-      container.id = "trend-chips";
       const label = document.createElement("div");
       label.className = "trend-label";
-      label.textContent = "\u8A71\u3057\u304B\u3051\u308B\u304B\u3001\u6C17\u306B\u306A\u308B\u30C8\u30D4\u30C3\u30AF\u304C\u3042\u308C\u3070\u3053\u306E\u4E2D\u304B\u3089\u9078\u629E\u3057\u3066\u304F\u3060\u3055\u3044";
+      label.textContent = "\u6C17\u306B\u306A\u308B\u30C8\u30D4\u30C3\u30AF\u304C\u3042\u308C\u3070\u9078\u3093\u3067\u304F\u3060\u3055\u3044";
       container.appendChild(label);
       const chips = document.createElement("div");
       chips.className = "trend-chips";
-      for (const topic of topics) {
+      const allTopics = [...topics, null]; // null = free talk
+      for (const topic of allTopics) {
         const chip = document.createElement("button");
         chip.className = "trend-chip";
-        chip.textContent = topic;
         chip.type = "button";
+        chip.textContent = topic || "\uD83D\uDCAC \u30D5\u30EA\u30FC\u30C8\u30FC\u30AF";
         chip.onclick = () => {
-          container.remove();
-          addMsg(topic, "user");
-          if (ws?.readyState === WebSocket.OPEN) {
-            // Pause audio streaming before sending text
-            isRecording = false;
-            try {
-              ws.send(JSON.stringify({
-                clientContent: {
-                  turns: [{ role: "user", parts: [{ text: topic }] }],
-                  turnComplete: true,
-                },
-              }));
-            } catch (e) {
-              console.error("Topic send failed:", e);
-            }
-            // Resume audio after short delay
-            setTimeout(() => { isRecording = true; }, 500);
-          }
+          selectedTopic = (selectedTopic === topic) ? null : topic;
+          chips.querySelectorAll(".trend-chip").forEach(c => {
+            const val = c.dataset.topic;
+            c.classList.toggle("trend-chip--active", val === (selectedTopic || ""));
+          });
         };
+        chip.dataset.topic = topic || "";
         chips.appendChild(chip);
       }
       container.appendChild(chips);
-      document.getElementById("transcript").appendChild(container);
-    }
-
-    function removeTrendChips() {
-      document.getElementById("trend-chips")?.remove();
+      area.appendChild(container);
     }
 
     function showMicToggle() {
@@ -902,10 +903,10 @@
       playCtx?.close();
       playCtx = null;
       hideMicToggle();
-      removeTrendChips();
       stopRecording();
       audioCtx?.close();
       audioCtx = null;
+      selectedTopic = null;
       ws.close();
     }
 
@@ -968,7 +969,6 @@
     }
 
     function handleAiText(text) {
-      removeTrendChips();
       const targetMsg = currentAiMsg || awaitingTranslation;
       if (!targetMsg) {
         currentAiMsg = document.createElement("div");
@@ -1084,7 +1084,6 @@
           setStatus("\u6e96\u5099\u304c\u3067\u304d\u305f\u3089\u8a71\u3057\u304b\u3051\u3066\u307f\u3066\u304f\u3060\u3055\u3044\u3002");
           startRecording();
           showMicToggle();
-          showTrendChips();
           return;
         }
 
