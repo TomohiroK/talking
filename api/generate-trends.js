@@ -24,18 +24,6 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Step 1: Check env vars
-    const kvUrl = process.env.KV_REST_API_URL;
-    const kvToken = process.env.KV_REST_API_TOKEN;
-    if (!kvUrl || !kvToken) {
-      return res.status(500).json({
-        error: "Missing Redis env vars",
-        hasUrl: !!kvUrl,
-        hasToken: !!kvToken,
-      });
-    }
-
-    // Step 2: Call Gemini API
     const apiRes = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
       {
@@ -49,21 +37,21 @@ export default async function handler(req, res) {
     );
 
     if (!apiRes.ok) {
-      const errText = await apiRes.text();
-      return res.status(500).json({ error: "Gemini API error", status: apiRes.status, detail: errText });
+      return res.status(500).json({ error: "Gemini API error", status: apiRes.status });
     }
 
-    // Step 3: Parse response
     const json = await apiRes.json();
     const text = json.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
     const trends = JSON.parse(text.replace(/```json?\n?|\n?```/g, ""));
 
-    // Step 4: Save to Redis
-    const redis = new Redis({ url: kvUrl, token: kvToken });
+    const redis = new Redis({
+      url: process.env.KV_REST_API_URL,
+      token: process.env.KV_REST_API_TOKEN,
+    });
     await redis.set(TRENDS_KEY, trends, { ex: TRENDS_TTL_SECONDS });
 
     return res.json({ ok: true, trends });
   } catch (e) {
-    return res.status(500).json({ error: e.message, stack: e.stack });
+    return res.status(500).json({ error: e.message });
   }
 }
