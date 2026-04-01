@@ -276,6 +276,7 @@
     #controls.hidden { display: none; }
     .controls__header { margin-top: auto; }
     .controls__cards { margin-bottom: auto; }
+    #char-config { margin-bottom: auto; width: 100%; max-width: 520px; }
     .controls__header { text-align: center; display: flex; flex-direction: column; gap: 8px; }
     .controls__eyebrow { font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-text-muted); }
     .controls__title { font-size: clamp(22px,5vw,28px); font-weight: 700; letter-spacing: -0.02em; line-height: 1.2; }
@@ -479,6 +480,151 @@
       font-weight: 700;
     }
 
+    /* Personality sliders */
+    .personality-panel {
+      width: 100%;
+      margin-top: 16px;
+    }
+    .personality-panel__header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      padding: 8px 0;
+    }
+    .personality-panel__title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--color-text-secondary);
+    }
+    .personality-panel__toggle {
+      font-size: 11px;
+      color: var(--color-text-secondary);
+      transition: transform var(--duration-fast) var(--ease-out);
+    }
+    .personality-panel__toggle.open { transform: rotate(180deg); }
+    .personality-panel__body {
+      display: none;
+      flex-direction: column;
+      gap: 10px;
+      padding-top: 4px;
+    }
+    .personality-panel__body.open { display: flex; }
+    .personality-slider {
+      display: grid;
+      grid-template-columns: 28px 1fr 24px;
+      align-items: center;
+      gap: 8px;
+    }
+    .personality-slider__icon {
+      font-size: 16px;
+      text-align: center;
+    }
+    .personality-slider__range {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 4px;
+      border-radius: 2px;
+      background: rgba(255,255,255,0.12);
+      outline: none;
+    }
+    .personality-slider__range::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--color-accent-primary);
+      cursor: pointer;
+      border: 2px solid var(--color-bg-primary);
+      box-shadow: 0 0 6px rgba(224,64,251,0.4);
+    }
+    .personality-slider__range::-moz-range-thumb {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--color-accent-primary);
+      cursor: pointer;
+      border: 2px solid var(--color-bg-primary);
+      box-shadow: 0 0 6px rgba(224,64,251,0.4);
+    }
+    .personality-slider__val {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--color-text-primary);
+      text-align: center;
+      min-width: 16px;
+    }
+
+    .char-config__selected {
+      text-align: center;
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--color-text-primary);
+      margin-bottom: 12px;
+    }
+    .start-btn {
+      width: 100%;
+      padding: 14px 0;
+      border: none;
+      border-radius: var(--radius-card);
+      background: linear-gradient(135deg, var(--color-accent-primary), var(--color-accent-secondary));
+      color: #fff;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 16px;
+      white-space: nowrap;
+      transition: opacity var(--duration-fast) var(--ease-out);
+    }
+    .start-btn:hover { opacity: 0.9; }
+    .start-btn:active { transform: scale(0.98); }
+    .back-to-select-btn {
+      width: 100%;
+      padding: 10px 0;
+      border: 1px solid var(--color-border-subtle);
+      border-radius: var(--radius-card);
+      background: transparent;
+      color: var(--color-text-secondary);
+      font-size: 13px;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: all var(--duration-fast) var(--ease-out);
+    }
+    .back-to-select-btn:hover { color: var(--color-text-primary); border-color: rgba(255,255,255,0.3); }
+
+    .personality-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 4px;
+    }
+    .personality-action-btn {
+      flex: 1;
+      padding: 7px 0;
+      border-radius: var(--radius-badge);
+      border: 1px solid rgba(224,64,251,0.4);
+      background: rgba(224,64,251,0.1);
+      color: var(--color-text-primary);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all var(--duration-fast) var(--ease-out);
+    }
+    .personality-action-btn:hover { background: rgba(224,64,251,0.2); }
+    .personality-action-btn--ghost {
+      border-color: var(--color-border-subtle);
+      background: transparent;
+      color: var(--color-text-secondary);
+    }
+    .personality-action-btn--ghost:hover { background: rgba(255,255,255,0.06); }
+    .personality-save-msg {
+      font-size: 11px;
+      color: var(--color-text-muted);
+      text-align: center;
+      min-height: 16px;
+    }
+
     /* Countdown overlay */
     #countdown-overlay {
       display: none;
@@ -589,28 +735,51 @@
       <button class="age-btn age-btn--active" data-age="adult" onclick="selectAge('adult')">&#128172; 25&#27507;+</button>
     </div>
 
-    <div id="trend-chips-area"></div>
-
     <div class="controls__cards">
       <article class="char-card char-card--angie" tabindex="0"
-        onclick="start('Kore')"
-        onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();start('Kore')}">
+        onclick="selectChar('Kore')"
+        onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();selectChar('Kore')}">
         <div class="char-card__avatar" aria-hidden="true">&#128105;</div>
         <strong class="char-card__name">Angie</strong>
         <p class="char-card__desc">LA&#22312;&#20303;&#12398;&#12509;&#12483;&#12503;&#12471;&#12531;&#12460;&#12540;&#12290;<br>&#12486;&#12531;&#12471;&#12519;&#12531;&#39640;&#12417;&#12391;&#27005;&#12375;&#12356;&#65281;</p>
         <span class="char-card__badge"><span class="char-card__badge-dot" aria-hidden="true"></span>Voice &middot; Kore</span>
-        <div class="char-card__cta" aria-hidden="true">Angie&#12392;&#35441;&#12377; &#8594;</div>
+        <div class="char-card__cta" aria-hidden="true">Angie&#12434;&#36984;&#12406;</div>
       </article>
 
       <article class="char-card char-card--andy" tabindex="0"
-        onclick="start('Puck')"
-        onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();start('Puck')}">
+        onclick="selectChar('Puck')"
+        onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();selectChar('Puck')}">
         <div class="char-card__avatar" aria-hidden="true">&#128104;</div>
         <strong class="char-card__name">Andy</strong>
         <p class="char-card__desc">NY&#12398;&#12473;&#12488;&#12522;&#12540;&#12488;&#12501;&#12540;&#12489;&#31995;YouTuber&#12290;<br>&#12494;&#12522;&#12364;&#33391;&#12367;&#12390;&#38754;&#30333;&#12356;&#65281;</p>
         <span class="char-card__badge"><span class="char-card__badge-dot" aria-hidden="true"></span>Voice &middot; Puck</span>
-        <div class="char-card__cta" aria-hidden="true">Andy&#12392;&#35441;&#12377; &#8594;</div>
+        <div class="char-card__cta" aria-hidden="true">Andy&#12434;&#36984;&#12406;</div>
       </article>
+    </div>
+
+    <!-- Post-selection: personality + trends + start button -->
+    <div id="char-config" style="display:none;">
+      <div class="char-config__selected" id="char-config-name"></div>
+
+      <div class="personality-panel" id="personality-panel">
+        <div class="personality-panel__header" onclick="togglePersonalityPanel()">
+          <span class="personality-panel__title">&#127911; パーソナリティ調整</span>
+          <span class="personality-panel__toggle" id="personality-toggle">&#9660;</span>
+        </div>
+        <div class="personality-panel__body" id="personality-body">
+          <div id="personality-sliders"></div>
+          <div class="personality-actions">
+            <button class="personality-action-btn" onclick="savePersonality()">&#128190; 保存</button>
+            <button class="personality-action-btn personality-action-btn--ghost" onclick="resetPersonality()">&#8635; リセット</button>
+          </div>
+          <div class="personality-save-msg" id="personality-save-msg"></div>
+        </div>
+      </div>
+
+      <div id="trend-chips-area"></div>
+
+      <button class="start-btn" id="start-btn" onclick="start(lastSelectedVoice)">&#9654; &#20250;&#35441;&#12434;&#22987;&#12417;&#12427;</button>
+      <button class="back-to-select-btn" onclick="backToSelect()">&#8592; &#12461;&#12515;&#12521;&#36984;&#25246;&#12395;&#25147;&#12427;</button>
     </div>
   </div>
 
@@ -672,6 +841,210 @@
       adult: "", // default — no modifier
     };
 
+    // Personality parameter system
+    const PERSONALITY_PARAMS = [
+      { key: "energy",        label: "テンション",   icon: "\u26A1" },
+      { key: "talkativeness", label: "おしゃべり度", icon: "\uD83D\uDCAC" },
+      { key: "correction",    label: "ツッコミ度",   icon: "\u270F\uFE0F" },
+      { key: "humor",         label: "ノリ",         icon: "\uD83D\uDE02" },
+      { key: "closeness",     label: "親しさ",       icon: "\uD83E\uDD1D" },
+      { key: "pacing",        label: "スピード",     icon: "\uD83C\uDFC3" },
+    ];
+
+    const PERSONALITY_DEFAULTS = {
+      Kore: {
+        en: { energy: 5, talkativeness: 4, correction: 3, humor: 3, closeness: 4, pacing: 4 },
+        id: { energy: 5, talkativeness: 4, correction: 3, humor: 3, closeness: 4, pacing: 4 },
+        ja: { energy: 2, talkativeness: 3, correction: 2, humor: 2, closeness: 2, pacing: 2 },
+      },
+      Puck: {
+        en: { energy: 3, talkativeness: 4, correction: 3, humor: 4, closeness: 4, pacing: 3 },
+        id: { energy: 3, talkativeness: 4, correction: 3, humor: 4, closeness: 4, pacing: 3 },
+        ja: { energy: 5, talkativeness: 5, correction: 3, humor: 5, closeness: 4, pacing: 4 },
+      },
+    };
+
+    const PERSONALITY_MODIFIERS = {
+      energy: {
+        1: "Be very calm, relaxed, and mellow. Speak in a soothing, unhurried tone. No exclamation marks.",
+        2: "Be fairly calm and composed. Keep energy moderate. Use a warm but relaxed tone.",
+        4: "Be upbeat and energetic. Show enthusiasm in your responses. Use exclamation marks naturally.",
+        5: "Be SUPER energetic and hyped! Show maximum enthusiasm. Use exclamations freely. Your energy is infectious!",
+      },
+      talkativeness: {
+        1: "Keep responses very short — just 1 sentence. Be a person of few words. Let silence be comfortable.",
+        2: "Keep responses brief — 1-2 sentences max. Don't elaborate unless asked.",
+        4: "Feel free to elaborate a bit. 2-4 sentences is fine. Add details and follow-up questions.",
+        5: "Be very talkative! Elaborate on topics, share stories, add multiple follow-up questions. 3-5 sentences.",
+      },
+      correction: {
+        1: "Never correct grammar or pronunciation. Just keep the conversation flowing naturally. Prioritize fun.",
+        2: "Rarely correct grammar. Only mention it if the meaning is unclear. Keep corrections very gentle.",
+        4: "Actively but kindly correct grammar mistakes. After responding to content, briefly note the correction.",
+        5: "Be a strict but caring language coach. Correct every grammar mistake immediately. Provide the correct form and briefly explain why.",
+      },
+      humor: {
+        1: "Be serious and straightforward. No jokes or humor. Focus on meaningful, thoughtful conversation.",
+        2: "Be mostly serious with occasional light humor. Keep wit subtle and dry.",
+        4: "Be funny and playful. Crack jokes, use wordplay, keep things lighthearted. Make the user laugh.",
+        5: "Be hilarious! Every response should have humor — puns, jokes, funny observations, exaggerated reactions. Comedy is your top priority.",
+      },
+      closeness: {
+        1: "Be polite and formal. Use respectful language. Keep professional distance. Address the user formally.",
+        2: "Be friendly but maintain some formality. Warm but not overly casual.",
+        4: "Be very friendly and casual, like a close friend. Use informal language, nicknames, and casual expressions.",
+        5: "Be like a childhood best friend. Super casual, use slang freely, tease playfully, share personal stories. No filter.",
+      },
+      pacing: {
+        1: "Speak very slowly and clearly. Pause between ideas. Repeat key words. Perfect for beginners.",
+        2: "Speak at a relaxed, measured pace. Enunciate clearly. Give the listener time to process.",
+        4: "Speak at a natural, brisk pace. Don't slow down unnecessarily. Keep the conversation moving.",
+        5: "Speak fast and energetically! Quick responses, rapid-fire banter. Keep up the tempo. No pauses.",
+      },
+    };
+
+    let personalityValues = {};
+    let lastSelectedVoice = null;
+
+    async function initPersonality(voice, lang) {
+      const defaults = PERSONALITY_DEFAULTS[voice]?.[lang];
+      if (!defaults) return;
+      const saved = await loadSavedPersonality(voice, lang);
+      personalityValues = saved ? { ...saved } : { ...defaults };
+      lastSelectedVoice = voice;
+      renderPersonalitySliders();
+    }
+
+    const CHAR_NAMES = { Kore: "Angie", Puck: "Andy" };
+
+    async function selectChar(voice) {
+      lastSelectedVoice = voice;
+      // Show config screen immediately, load personality async
+      document.querySelector(".controls__cards").style.display = "none";
+      document.getElementById("char-config").style.display = "block";
+      document.getElementById("char-config-name").textContent =
+        (voice === "Kore" ? "\uD83D\uDC69" : "\uD83D\uDC68") + " " + CHAR_NAMES[voice] + " \u3068\u4F1A\u8A71\u6E96\u5099";
+      await initPersonality(voice, selectedLang);
+      renderTrendChips();
+    }
+
+    function backToSelect() {
+      document.querySelector(".controls__cards").style.display = "";
+      document.getElementById("char-config").style.display = "none";
+    }
+
+    function renderPersonalitySliders() {
+      const body = document.getElementById("personality-sliders");
+      if (!body) return;
+      body.innerHTML = "";
+      for (const p of PERSONALITY_PARAMS) {
+        const row = document.createElement("div");
+        row.className = "personality-slider";
+        const icon = document.createElement("span");
+        icon.className = "personality-slider__icon";
+        icon.textContent = p.icon;
+        icon.title = p.label;
+        const range = document.createElement("input");
+        range.type = "range";
+        range.className = "personality-slider__range";
+        range.min = 1;
+        range.max = 5;
+        range.step = 1;
+        range.value = personalityValues[p.key] || 3;
+        range.dataset.key = p.key;
+        const val = document.createElement("span");
+        val.className = "personality-slider__val";
+        val.textContent = range.value;
+        range.oninput = () => {
+          personalityValues[p.key] = Number(range.value);
+          val.textContent = range.value;
+        };
+        row.appendChild(icon);
+        row.appendChild(range);
+        row.appendChild(val);
+        body.appendChild(row);
+      }
+    }
+
+    function togglePersonalityPanel() {
+      const body = document.getElementById("personality-body");
+      const toggle = document.getElementById("personality-toggle");
+      body.classList.toggle("open");
+      toggle.classList.toggle("open");
+    }
+
+    // IndexedDB persistence for personality settings
+    const PERSONALITY_DB_NAME = "echotalk";
+    const PERSONALITY_DB_VERSION = 1;
+    const PERSONALITY_STORE = "personality";
+
+    function openPersonalityDB() {
+      return new Promise((resolve, reject) => {
+        const req = indexedDB.open(PERSONALITY_DB_NAME, PERSONALITY_DB_VERSION);
+        req.onupgradeneeded = () => {
+          const db = req.result;
+          if (!db.objectStoreNames.contains(PERSONALITY_STORE)) {
+            db.createObjectStore(PERSONALITY_STORE);
+          }
+        };
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    function dbKey(voice, lang) { return voice + ":" + lang; }
+
+    async function savePersonality() {
+      if (!lastSelectedVoice) return;
+      try {
+        const db = await openPersonalityDB();
+        const tx = db.transaction(PERSONALITY_STORE, "readwrite");
+        tx.objectStore(PERSONALITY_STORE).put({ ...personalityValues }, dbKey(lastSelectedVoice, selectedLang));
+        await new Promise((resolve, reject) => { tx.oncomplete = resolve; tx.onerror = reject; });
+        db.close();
+      } catch (e) { /* graceful degradation */ }
+      const msg = document.getElementById("personality-save-msg");
+      msg.textContent = "\u2713 \u4FDD\u5B58\u3057\u307E\u3057\u305F";
+      setTimeout(() => { msg.textContent = ""; }, 2000);
+    }
+
+    async function resetPersonality() {
+      if (!lastSelectedVoice) return;
+      const defaults = PERSONALITY_DEFAULTS[lastSelectedVoice]?.[selectedLang];
+      if (!defaults) return;
+      personalityValues = { ...defaults };
+      renderPersonalitySliders();
+      try {
+        const db = await openPersonalityDB();
+        const tx = db.transaction(PERSONALITY_STORE, "readwrite");
+        tx.objectStore(PERSONALITY_STORE).delete(dbKey(lastSelectedVoice, selectedLang));
+        await new Promise((resolve, reject) => { tx.oncomplete = resolve; tx.onerror = reject; });
+        db.close();
+      } catch (e) { /* graceful degradation */ }
+      const msg = document.getElementById("personality-save-msg");
+      msg.textContent = "\u2713 \u521D\u671F\u5024\u306B\u623B\u3057\u307E\u3057\u305F";
+      setTimeout(() => { msg.textContent = ""; }, 2000);
+    }
+
+    async function loadSavedPersonality(voice, lang) {
+      try {
+        const db = await openPersonalityDB();
+        const tx = db.transaction(PERSONALITY_STORE, "readonly");
+        const req = tx.objectStore(PERSONALITY_STORE).get(dbKey(voice, lang));
+        const result = await new Promise((resolve, reject) => { req.onsuccess = () => resolve(req.result); req.onerror = reject; });
+        db.close();
+        return result || null;
+      } catch (e) { return null; }
+    }
+
+    function buildPersonalityPrompt() {
+      return Object.entries(personalityValues)
+        .filter(([_, val]) => val !== 3)
+        .map(([key, val]) => PERSONALITY_MODIFIERS[key]?.[val])
+        .filter(Boolean)
+        .join(" ");
+    }
+
     function getSystemPrompt(voice, lang) {
       const base = CHARACTER_PROMPTS[voice]?.[lang] || CHARACTER_PROMPTS.Kore.en;
       const modifier = AGE_MODIFIERS[selectedAge] || "";
@@ -682,7 +1055,8 @@
         const topics = trendTopics[selectedAge];
         trendHint = "CONVERSATION TOPICS: Here are some trending topics in Japan you can naturally bring up during the conversation to keep it engaging. Don't force them — weave them in when relevant:\n" + topics.map((t, i) => (i + 1) + ". " + t).join("\n");
       }
-      return [base, modifier, trendHint].filter(Boolean).join("\n\n");
+      const personalityMod = buildPersonalityPrompt();
+      return [base, modifier, personalityMod, trendHint].filter(Boolean).join("\n\n");
     }
 
     function selectLang(lang) {
@@ -690,6 +1064,9 @@
       document.querySelectorAll(".lang-btn").forEach(btn => {
         btn.classList.toggle("lang-btn--active", btn.dataset.lang === lang);
       });
+      if (lastSelectedVoice && document.getElementById("char-config").style.display !== "none") {
+        initPersonality(lastSelectedVoice, lang); // async — fire-and-forget OK here, sliders update when ready
+      }
     }
 
     function selectAge(age) {
@@ -1126,6 +1503,9 @@
         document.getElementById("back-btn").classList.remove("visible");
         document.getElementById("transcript").innerHTML = "";
         document.querySelectorAll(".char-card").forEach(c => c.removeAttribute("aria-disabled"));
+        // Reset to character selection view
+        document.querySelector(".controls__cards").style.display = "";
+        document.getElementById("char-config").style.display = "none";
         currentAiMsg = null;
         currentAiText = "";
         awaitingTranslation = null;
