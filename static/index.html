@@ -778,7 +778,7 @@
 
       <div id="trend-chips-area"></div>
 
-      <button class="start-btn" id="start-btn" onclick="start(lastSelectedVoice)">&#9654; &#20250;&#35441;&#12434;&#22987;&#12417;&#12427;</button>
+      <button class="start-btn" id="start-btn" onclick="start(lastSelectedVoice)"></button>
       <button class="back-to-select-btn" onclick="backToSelect()">&#8592; &#12461;&#12515;&#12521;&#36984;&#25246;&#12395;&#25147;&#12427;</button>
     </div>
   </div>
@@ -806,6 +806,7 @@
 
     // Trend topics (fetched asynchronously)
     let trendTopics = null;
+    const FREE_TALK = "__free__";
     let selectedTopic = null;
     let selectedAge = "adult";
 
@@ -924,6 +925,7 @@
       document.getElementById("char-config").style.display = "block";
       document.getElementById("char-config-name").textContent =
         (voice === "Kore" ? "\uD83D\uDC69" : "\uD83D\uDC68") + " " + CHAR_NAMES[voice] + " \u3068\u4F1A\u8A71\u6E96\u5099";
+      document.getElementById("start-btn").textContent = CHAR_NAMES[voice] + "\u3068\u8A71\u3059 \u25B6";
       await initPersonality(voice, selectedLang);
       renderTrendChips();
     }
@@ -1049,7 +1051,9 @@
       const base = CHARACTER_PROMPTS[voice]?.[lang] || CHARACTER_PROMPTS.Kore.en;
       const modifier = AGE_MODIFIERS[selectedAge] || "";
       let trendHint = "";
-      if (selectedTopic) {
+      if (selectedTopic === FREE_TALK) {
+        trendHint = ""; // Free talk: no topic guidance
+      } else if (selectedTopic) {
         trendHint = "IMPORTANT: The user has chosen this topic to talk about. Start the conversation by naturally bringing up this topic: \"" + selectedTopic + "\". Greet the user and smoothly lead into this topic.";
       } else if (trendTopics?.[selectedAge]) {
         const topics = trendTopics[selectedAge];
@@ -1121,12 +1125,12 @@
       container.appendChild(label);
       const chips = document.createElement("div");
       chips.className = "trend-chips";
-      const allTopics = [...topics, null]; // null = free talk
+      const allTopics = [...topics, FREE_TALK];
       for (const topic of allTopics) {
         const chip = document.createElement("button");
         chip.className = "trend-chip";
         chip.type = "button";
-        chip.textContent = topic || "\uD83D\uDCAC \u30D5\u30EA\u30FC\u30C8\u30FC\u30AF";
+        chip.textContent = topic === FREE_TALK ? "\uD83D\uDCAC \u30D5\u30EA\u30FC\u30C8\u30FC\u30AF" : topic;
         chip.onclick = () => {
           selectedTopic = (selectedTopic === topic) ? null : topic;
           chips.querySelectorAll(".trend-chip").forEach(c => {
@@ -1134,7 +1138,7 @@
             c.classList.toggle("trend-chip--active", val === (selectedTopic || ""));
           });
         };
-        chip.dataset.topic = topic || "";
+        chip.dataset.topic = topic;
         chips.appendChild(chip);
       }
       container.appendChild(chips);
@@ -1393,28 +1397,29 @@
       document.querySelectorAll(".char-card").forEach(c => c.setAttribute("aria-disabled", "true"));
       setStatus("Connecting...");
 
-      try {
-        audioCtx = new AudioContext({ sampleRate: 16000 });
-        mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      } catch (e) {
+      // Run mic acquisition and session fetch in parallel
+      let session;
+      const [micResult, sessionResult] = await Promise.allSettled([
+        (async () => {
+          audioCtx = new AudioContext({ sampleRate: 16000 });
+          mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        })(),
+        fetch("/api/session").then(r => { if (!r.ok) throw new Error("Session failed: " + r.status); return r.json(); }),
+      ]);
+
+      if (micResult.status === "rejected") {
         setStatus("\u30de\u30a4\u30af\u306e\u8a31\u53ef\u304c\u5fc5\u8981\u3067\u3059\u3002");
         document.querySelectorAll(".char-card").forEach(c => c.removeAttribute("aria-disabled"));
         return;
       }
-
-      // Fetch session config from server
-      let session;
-      try {
-        const res = await fetch("/api/session");
-        if (!res.ok) throw new Error("Session failed: " + res.status);
-        session = await res.json();
-      } catch (e) {
+      if (sessionResult.status === "rejected") {
         setStatus("\u63a5\u7d9a\u306b\u5931\u6557\u3057\u307e\u3057\u305f\u3002\u30ea\u30ed\u30fc\u30c9\u3057\u3066\u304f\u3060\u3055\u3044\u3002");
         audioCtx?.close(); audioCtx = null;
         mediaStream?.getTracks().forEach(t => t.stop());
         document.querySelectorAll(".char-card").forEach(c => c.removeAttribute("aria-disabled"));
         return;
       }
+      session = sessionResult.value;
 
       // Switch to conversation view & start countdown
       document.getElementById("controls").classList.add("hidden");
